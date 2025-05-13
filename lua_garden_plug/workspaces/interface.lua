@@ -1,0 +1,5 @@
+-- interface.lua
+-- Draw an interface for the module.
+-- 
+-- Available globals:
+-- SAMPLE_RATE - The sample rate the plugin is running at.

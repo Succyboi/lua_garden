@@ -1,0 +1,7 @@
+Uses nih-plug under ISC.
+Uses Phosphor icons under MIT.
+Uses egui under MIT.
+Uses mlua under MIT
+Themes inspired by Hundred Rabbits, Aeriform and LOSPEC.
+
+Special thanks to Scott Feeney, musicdsp.org and all the maintainers and community of the resources used to realize this project.

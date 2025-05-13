@@ -1,0 +1,18 @@
+[package]
+name = "lua_garden"
+authors = ["Puk Bruinsma <puk@stupidplusplus.com>"]
+version = "0.3.0"
+edition = "2021"
+description = "A signal processing programming playground."
+license-file = "LICENSE"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+path = "src/lib.rs"
+
+[dependencies]
+mlua = { version = "0.10.2", features = ["lua54", "vendored", "send"] }
+nih_plug = { git = "https://github.com/robbert-vdh/nih-plug", features = ["standalone", "vst3"] }
+nih_plug_egui = { git = "https://github.com/robbert-vdh/nih-plug" }
+base64 = "0.22.1"
+lua_garden_egui_themes = { path = "../lua_garden_egui_themes" }

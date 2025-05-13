@@ -1,0 +1,8 @@
+[package]
+name = "lua_garden_egui_themes"
+authors = ["Puk Bruinsma <stupidplusplus@gmail.com>"]
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+nih_plug_egui = { git = "https://github.com/robbert-vdh/nih-plug" }

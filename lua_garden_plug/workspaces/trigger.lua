@@ -1,0 +1,5 @@
+-- trigger.lua
+-- Trigger envelopes and stuff here. Currently not implemented.
+-- 
+-- Available globals:
+-- SAMPLE_RATE - The sample rate the plugin is running at.
