@@ -37,6 +37,8 @@ impl InterfaceRuntime {
     }
 
     pub fn draw_parameters(&mut self, ui: &mut Ui, runtime_data: &RuntimeData, interface_data: &mut InterfaceData) {
+        ui.label("This section is experimental and may impact performance.");
+        ui.separator();
         ui.label(format!("Module \"{name}\" has {parameter_count} parameter(s):", 
             name = runtime_data.module_name, 
             parameter_count = interface_data.parameters.len()));

@@ -1,6 +1,7 @@
 mod themes;
 
 pub use themes::*;
+use std::sync::Arc;
 use nih_plug_egui::egui::{self, epaint, style };
 use crate::epaint::{ FontFamily::Proportional, FontId };
 use crate::style::TextStyle::{ Button, Monospace, Heading, Body, Small };
@@ -89,7 +90,7 @@ impl Theme {
             Some(font_data) => {
                 fonts.font_data.insert(
                     self.font_name.to_owned(),
-                    egui::FontData::from_static(font_data));
+                    Arc::new(egui::FontData::from_static(font_data)));
 
                 fonts.families
                     .entry(egui::FontFamily::Proportional)
@@ -108,7 +109,7 @@ impl Theme {
             Some(font_data) => {
                 fonts.font_data.insert(
                     self.mono_font_name.to_owned(),
-                    egui::FontData::from_static(font_data));
+                    Arc::new(egui::FontData::from_static(font_data)));
 
                 fonts.families
                     .entry(egui::FontFamily::Monospace)
@@ -122,7 +123,7 @@ impl Theme {
             Some(font_data) => {
                 fonts.font_data.insert(
                     self.icon_font_name.to_owned(),
-                    egui::FontData::from_static(font_data));
+                    Arc::new(egui::FontData::from_static(font_data)));
 
                 fonts.families
                     .entry(egui::FontFamily::Proportional)
