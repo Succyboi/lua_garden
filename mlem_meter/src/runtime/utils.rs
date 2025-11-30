@@ -17,7 +17,7 @@ impl Timer {
         return timer;
     }
     
-    pub fn elapsed_ms(self) -> f32 {
+    pub fn elapsed_ms(&self) -> f32 {
         return self.instant.elapsed().as_nanos() as f32 / 1000000.0;
     }
 }

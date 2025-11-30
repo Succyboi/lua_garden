@@ -2,18 +2,31 @@ pub mod utils;
 pub mod runtime_data;
 pub mod parameter;
 
-use crate::console::ConsoleSender;
+use std::fmt::Error;
+
+use crate::{console::ConsoleSender, runtime::runtime_data::RuntimeData};
 use nih_plug::prelude::*;
 use utils::{ RMS, Timer };
+use ebur128::{EbuR128, Mode};
 
 pub struct Runtime {
     pub console: Option<ConsoleSender>,
 
-    sample_rate : f32,
-    buffer_size : usize,
-    channels : usize,
+    sample_rate: f32,
+    buffer_size: usize,
+    channels: usize,
+    
+    active_time: Timer,
+    lufs_global_loudness: f64,
+    lufs_momentary_loudness: f64,
+    lufs_range_loudness: f64,
+    lufs_shortterm_loudness: f64,
+    lufs_window_loudness: f64,
+    
+    // TODO RMS
 
     run_time_rms: RMS,
+    ebur128: Option<EbuR128>,
     clip: bool
 }
 
@@ -26,7 +39,15 @@ impl Runtime {
             buffer_size: 0,
             channels: 0,
 
+            active_time: Timer::new(),
+            lufs_global_loudness: 0.0,
+            lufs_momentary_loudness: 0.0,
+            lufs_range_loudness: 0.0,
+            lufs_shortterm_loudness: 0.0,
+            lufs_window_loudness: 0.0,
+            
             run_time_rms: RMS::new(),
+            ebur128: None,
             clip: crate::consts::BUILD_IS_DEBUG
         };
 
@@ -48,10 +69,17 @@ impl Runtime {
         self.log(format!("Reset in {:.2}ms.", execute_timer.elapsed_ms()));
     }
 
-    pub fn run(&mut self, buffer : &mut Buffer) {
+    pub fn run(&mut self, buffer: &mut Buffer) {
         self.buffer_size = buffer.samples();
         self.channels = buffer.channels();
         let execute_timer = Timer::new();
+
+        match self.run_ebur128(buffer) {
+            Ok(()) => (),
+            Err(e) => {
+                self.log(format!("Failed to run EbuR128: {}", e));
+            }
+        }
 
         if self.clip {
             for channel_samples in buffer.iter_samples() {                        
@@ -64,23 +92,47 @@ impl Runtime {
         self.run_time_rms.process( execute_timer.elapsed_ms(), self.sample_rate);
     }
 
-    pub fn get_sample_rate(&self) -> f32 {
-        return self.sample_rate;
+    pub fn update_runtime_data(&mut self, runtime_data: &mut RuntimeData) {
+        runtime_data.sample_rate = self.sample_rate;
+        runtime_data.buffer_size = self.buffer_size;
+        runtime_data.channels = self.channels;
+        runtime_data.run_ms = self.run_time_rms.get();
+
+        runtime_data.active_time_ms = self.active_time.elapsed_ms();
+        runtime_data.lufs_global_loudness = self.lufs_global_loudness;
+        runtime_data.lufs_momentary_loudness = self.lufs_momentary_loudness;
+        runtime_data.lufs_range_loudness = self.lufs_range_loudness;
+        runtime_data.lufs_shortterm_loudness = self.lufs_shortterm_loudness;
+        runtime_data.lufs_window_loudness = self.lufs_window_loudness;
     }
 
-    pub fn get_buffer_size(&self) -> usize {
-        return self.buffer_size;
+    fn run_ebur128(&mut self, buffer: &mut Buffer) -> Result<(), Error> {
+        match &mut self.ebur128 {
+            Some(_ebur128) => (),
+            None => {
+                self.ebur128 = Some(EbuR128::new(self.channels as u32, self.sample_rate as u32, Mode::all()).expect("Couldn't create EbuR128"));
+            }
+        };
+
+        let ebur128 = self.ebur128.as_mut().expect("No EbuR128."); 
+        for block_channel in buffer.iter_blocks(buffer.samples()) {     
+            for channel in 0..block_channel.1.channels() {
+                let block_channel_samples = block_channel.1.get(channel).expect("Could not get samples from block.");
+
+                ebur128.add_frames_f32(block_channel_samples).expect("Couldn't add frames.");
+            }
+        }
+
+        self.lufs_global_loudness = ebur128.loudness_global().expect("Couldn't get global loudness.");
+        self.lufs_momentary_loudness = ebur128.loudness_momentary().expect("Couldn't get momentary loudness.");
+        self.lufs_range_loudness = ebur128.loudness_range().expect("Couldn't get range loudness.");
+        self.lufs_shortterm_loudness = ebur128.loudness_shortterm().expect("Couldn't get short term loudness.");
+        //self.lufs_window_loudness = ebur128.loudness_window(self.sample_rate as u32).expect("Couldn't get window loudness."); // TODO changeable window loudness
+
+        Ok(())
     }
 
-    pub fn get_channels(&self) -> usize {
-        return self.channels;
-    }
-
-    pub fn get_run_ms(&self) -> f32 {
-        return self.run_time_rms.get();
-    }
-
-    fn log(&self, message : String) {
+    fn log(&self, message: String) {
         match &self.console {
             Some(c) => {
                 c.log(message);

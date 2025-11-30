@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "xtask",
+
+    "mlem_meter"
+]

@@ -44,14 +44,7 @@ impl Default for PluginImplementationParams {
     }
 }
 
-impl PluginImplementation {
-    fn update_runtime_status(&self, runtime_data: &mut RuntimeData) {
-        runtime_data.sample_rate = self.runtime.get_sample_rate();
-        runtime_data.buffer_size = self.runtime.get_buffer_size();
-        runtime_data.channels = self.runtime.get_channels();
-        runtime_data.run_ms = self.runtime.get_run_ms();
-    }
-}
+impl PluginImplementation { }
 
 impl Plugin for PluginImplementation {
     const NAME: &'static str = consts::NAME;
@@ -128,8 +121,6 @@ impl Plugin for PluginImplementation {
         self.runtime.run(buffer);
         
         runtime_data.update_from_runtime(&mut self.runtime, &interface_data);
-
-        self.update_runtime_status(&mut runtime_data);
 
         return ProcessStatus::Normal;
     }

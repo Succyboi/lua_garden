@@ -1,6 +1,6 @@
 [package]
 name = "mlem_meter"
-authors = ["Puk Bruinsma <puk@mlemrecords.com>"]
+authors = ["Puk Bruinsma / DJ ZITwerK <puk@mlemrecords.com>"]
 homepage = "https://mlemrecords.com"
 version = "0.1.0"
 edition = "2021"
@@ -12,8 +12,7 @@ crate-type = ["cdylib", "lib"]
 path = "src/lib.rs"
 
 [dependencies]
-mlua = { version = "0.10.2", features = ["lua54", "vendored", "send"] }
 nih_plug = { git = "https://github.com/robbert-vdh/nih-plug", features = ["standalone", "vst3"] }
 nih_plug_egui = { git = "https://github.com/robbert-vdh/nih-plug" }
-base64 = "0.22.1"
+ebur128 = "0.1.10"
 mlem_egui_themes = { path = "../mlem_egui_themes" }

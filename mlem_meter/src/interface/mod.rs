@@ -1,10 +1,8 @@
 pub mod interface_data;
 pub mod interface_utils;
-pub mod interface_runtime;
 pub mod parameter;
 
-use std::{ hash::Hash, sync::{ Arc, RwLock } };
-use interface_runtime::{InterfaceRuntime, InterfaceRuntimeView};
+use std::{ hash::Hash, sync::{ Arc, RwLock }, time::Duration };
 use mlem_egui_themes::Theme;
 use nih_plug::prelude::*;
 use nih_plug_egui::{ egui::{ self, Context, Ui }, EguiState };
@@ -24,8 +22,6 @@ pub struct Interface {
 
     show_console: bool,
 
-    interface_runtime: InterfaceRuntime,
-
     theme: usize,
     themes: [mlem_egui_themes::Theme; 4],
 }
@@ -36,8 +32,6 @@ impl Interface {
             console: ConsoleReceiver::new(),
 
             show_console: false,
-
-            interface_runtime: InterfaceRuntime::new(),
 
             theme: 0,
             themes: [
@@ -100,6 +94,8 @@ impl Interface {
             ui.horizontal(|ui| {
                 self.draw_about_button(ui);
                 self.draw_darkmode_toggle(egui_ctx, ui);
+                ui.label(consts::NAME);
+
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Max), |ui| {
                     self.draw_console_toggle(ui);
                     ui.separator();
@@ -179,11 +175,35 @@ impl Interface {
             return; 
         }
 
-        ui.vertical(|ui| {
-            ui.monospace(format!("Your DAW is running at {rate}hz, {buff}buf, {channels}ch.", 
-                    rate = runtime_data.sample_rate,
-                    buff = runtime_data.buffer_size,
-                    channels = runtime_data.channels));
+        ui.horizontal(|ui| {
+            ui.label("Global:");
+            ui.monospace(format!("{: >4.2} lufs", runtime_data.lufs_global_loudness));
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("Momentary:");
+            ui.monospace(format!("{: >4.2} lufs", runtime_data.lufs_momentary_loudness));
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("Short Term:");
+            ui.monospace(format!("{: >4.2} lufs", runtime_data.lufs_shortterm_loudness));
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("Range:");
+            ui.monospace(format!("{: >4.2} lufs", runtime_data.lufs_range_loudness));
+        });
+
+        ui.add_space(ui.available_height() - 12.0);
+        ui.horizontal(|ui| {
+            let seconds = runtime_data.active_time_ms / 1000.0;
+            let minutes = f32::floor(seconds / 60.0);
+            
+            if ui.button("Reset").clicked() {
+                //TODO implement
+            }
+            ui.label(format!("{minutes: >1.0}m{seconds: >1.0}s", minutes = minutes, seconds = seconds - minutes * 60.0));
         });
     }
 
