@@ -1,0 +1,154 @@
+pub mod consts;
+pub mod runtime;
+pub mod interface;
+pub mod console;
+
+use console::ConsoleReceiver;
+use runtime::{ Runtime, runtime_data::RuntimeData };
+use interface::{ interface_data::InterfaceData, Interface };
+use nih_plug::prelude::*;
+use std::sync::{ Arc, RwLock };
+use nih_plug_egui::EguiState;
+
+pub struct PluginImplementation {
+    runtime: Runtime,
+    params: Arc<PluginImplementationParams>,
+    runtime_data: Arc<RwLock<RuntimeData>>,
+    interface_data: Arc<RwLock<InterfaceData>>
+}
+
+#[derive(Params)]
+pub struct PluginImplementationParams {
+    #[persist = "editor-state"]
+    editor_state: Arc<EguiState>,
+}
+
+impl Default for PluginImplementation {
+    fn default() -> Self {
+        let runtime = Runtime::new(None);
+
+        Self {
+            runtime: runtime,
+            params: Arc::new(PluginImplementationParams::default()),
+            runtime_data: Arc::from(RwLock::new(RuntimeData::new())),
+            interface_data: Arc::from(RwLock::new(InterfaceData::new()))
+        }
+    }
+}
+
+impl Default for PluginImplementationParams {
+    fn default() -> Self {
+        Self {
+            editor_state: EguiState::from_size(consts::WINDOW_SIZE_WIDTH, consts::WINDOW_SIZE_HEIGHT)
+        }
+    }
+}
+
+impl PluginImplementation {
+    fn update_runtime_status(&self, runtime_data: &mut RuntimeData) {
+        runtime_data.sample_rate = self.runtime.get_sample_rate();
+        runtime_data.buffer_size = self.runtime.get_buffer_size();
+        runtime_data.channels = self.runtime.get_channels();
+        runtime_data.run_ms = self.runtime.get_run_ms();
+    }
+}
+
+impl Plugin for PluginImplementation {
+    const NAME: &'static str = consts::NAME;
+    const VENDOR: &'static str = consts::PLUGIN_VENDOR;
+    const URL: &'static str = consts::HOMEPAGE;
+    const EMAIL: &'static str = consts::PLUGIN_EMAIL;
+    const VERSION: &'static str = consts::VERSION;
+
+    const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[AudioIOLayout {
+        main_input_channels: NonZeroU32::new(2),
+        main_output_channels: NonZeroU32::new(2),
+
+        aux_input_ports: &[],
+        aux_output_ports: &[],
+
+        names: PortNames::const_default(),
+    }];
+
+    const MIDI_INPUT: MidiConfig = MidiConfig::None;
+    const MIDI_OUTPUT: MidiConfig = MidiConfig::None;
+
+    const SAMPLE_ACCURATE_AUTOMATION: bool = true;
+
+    type SysExMessage = ();
+    type BackgroundTask = ();
+
+    fn params(&self) -> Arc<dyn Params> {
+        self.params.clone()
+    }
+
+    fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
+        let editor_state = self.params.editor_state.clone();
+        let params = self.params.clone();
+        let runtime_status = self.runtime_data.clone();
+        let interface_data = self.interface_data.clone();
+        let interface = Interface::new();
+        
+        self.runtime.console = Some(interface.console.create_sender());
+        let editor = interface.create_interface(editor_state, params, runtime_status, interface_data);
+
+        return editor;
+    }
+
+    fn initialize(
+        &mut self,
+        _audio_io_layout: &AudioIOLayout,
+        _buffer_config: &BufferConfig,
+        _context: &mut impl InitContext<Self>,
+    ) -> bool {
+        let _ = self.runtime.init(_buffer_config.sample_rate);
+
+        return true;
+    }
+
+    fn reset(&mut self) {
+        let runtime_data_lock = self.runtime_data.clone();
+        let mut runtime_data = runtime_data_lock.write().unwrap();
+
+        self.runtime.reset();
+    }
+
+    fn process(
+        &mut self,
+        buffer: &mut Buffer,
+        _aux: &mut AuxiliaryBuffers,
+        _context: &mut impl ProcessContext<Self>,
+    ) -> ProcessStatus {
+        let runtime_data_lock = self.runtime_data.clone();
+        let mut runtime_data = runtime_data_lock.write().unwrap();
+        let interface_data = self.interface_data.read().unwrap().clone();
+
+        runtime_data.update_from_interface(&interface_data);
+
+        self.runtime.run(buffer);
+        
+        runtime_data.update_from_runtime(&mut self.runtime, &interface_data);
+
+        self.update_runtime_status(&mut runtime_data);
+
+        return ProcessStatus::Normal;
+    }
+}
+
+impl ClapPlugin for PluginImplementation {
+    const CLAP_ID: &'static str = consts::PLUGIN_ID;
+    const CLAP_DESCRIPTION: Option<&'static str> = Some(consts::DESCRIPTION);
+    const CLAP_MANUAL_URL: Option<&'static str> = Some(consts::HOMEPAGE);
+    const CLAP_SUPPORT_URL: Option<&'static str> = Some(consts::DESCRIPTION);
+
+    const CLAP_FEATURES: &'static [ClapFeature] = consts::PLUGIN_CLAP_FEATURES;
+}
+
+impl Vst3Plugin for PluginImplementation {
+    const VST3_CLASS_ID: [u8; 16] = consts::PLUGIN_CLASS_ID;
+
+    const VST3_SUBCATEGORIES: &'static [Vst3SubCategory] = consts::PLUGIN_VST3_SUBCATEGORIES;
+}
+
+nih_export_clap!(PluginImplementation);
+nih_export_vst3!(PluginImplementation);

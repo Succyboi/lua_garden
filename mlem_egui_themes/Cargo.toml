@@ -1,6 +1,6 @@
 [package]
-name = "lua_garden_egui_themes"
-authors = ["Puk Bruinsma <stupidplusplus@gmail.com>"]
+name = "mlem_egui_themes"
+authors = ["Puk Bruinsma <puk@stupidplusplus.com>"]
 version = "0.1.0"
 edition = "2021"
 

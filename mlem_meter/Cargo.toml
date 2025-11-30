@@ -1,9 +1,10 @@
 [package]
-name = "lua_garden"
-authors = ["Puk Bruinsma <puk@stupidplusplus.com>"]
-version = "0.3.0"
+name = "mlem_meter"
+authors = ["Puk Bruinsma <puk@mlemrecords.com>"]
+homepage = "https://mlemrecords.com"
+version = "0.1.0"
 edition = "2021"
-description = "A signal processing programming playground."
+description = "An audio meter."
 license-file = "LICENSE"
 
 [lib]

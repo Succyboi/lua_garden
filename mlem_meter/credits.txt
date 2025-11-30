@@ -1,0 +1,4 @@
+Uses nih-plug under ISC.
+Uses Phosphor icons under MIT.
+Uses egui under MIT.
+Uses mlua under MIT

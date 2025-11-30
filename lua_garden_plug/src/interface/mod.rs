@@ -6,7 +6,7 @@ pub mod parameter;
 
 use std::{ hash::Hash, sync::{ Arc, RwLock } };
 use interface_runtime::{InterfaceRuntime, InterfaceRuntimeView};
-use lua_garden_egui_themes::Theme;
+use mlem_egui_themes::Theme;
 use nih_plug::prelude::*;
 use nih_plug_egui::{ egui::{ self, Context, Ui }, EguiState };
 use interface_data::InterfaceData;
@@ -40,7 +40,7 @@ pub struct Interface {
     interface_runtime: InterfaceRuntime,
 
     theme: usize,
-    themes: [lua_garden_egui_themes::Theme; 4],
+    themes: [mlem_egui_themes::Theme; 4],
 }
 
 #[derive(PartialEq)]
@@ -82,10 +82,10 @@ impl Interface {
 
             theme: 0,
             themes: [
-                lua_garden_egui_themes::garden_night(),
-                lua_garden_egui_themes::garden_day(),
-                lua_garden_egui_themes::garden_gameboy(),
-                lua_garden_egui_themes::garden_playdate()
+                mlem_egui_themes::garden_night(),
+                mlem_egui_themes::garden_day(),
+                mlem_egui_themes::garden_gameboy(),
+                mlem_egui_themes::garden_playdate()
             ]
         };
     }
@@ -124,7 +124,7 @@ impl Interface {
     }
 
     fn build_interface(&mut self, egui_ctx: &Context, _state: &mut (), _params: Arc<LuaGardenParams>, _runtime_data: Arc<RwLock<RuntimeData>>, _interface_data: Arc<RwLock<InterfaceData>>) {
-        lua_garden_egui_themes::set_theme(egui_ctx, self.get_theme());
+        mlem_egui_themes::set_theme(egui_ctx, self.get_theme());
 
         self.console.log(format!("{name} v{version} {build_type} ({id}).", name = consts::NAME, version = consts::VERSION, build_type = consts::BUILD_TYPE, id = consts::BUILD_ID));
         self.console.log(format!("{}", consts::MOTD));
@@ -192,7 +192,7 @@ impl Interface {
         ui.horizontal_top(|ui| {
             if ui.button("\u{E472}").clicked() {
                 self.theme = (self.theme + 1) % self.themes.len();
-                lua_garden_egui_themes::set_theme(egui_ctx, self.get_theme());
+                mlem_egui_themes::set_theme(egui_ctx, self.get_theme());
             }
         });
     }
