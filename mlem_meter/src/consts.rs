@@ -28,7 +28,7 @@ pub const PLUGIN_VST3_SUBCATEGORIES: &'static [Vst3SubCategory] = &[Vst3SubCateg
 
 pub const MOTD: &str = "May your levels be accurate! ♥";
 
-pub const WINDOW_SIZE_WIDTH: u32 = 384;
-pub const WINDOW_SIZE_HEIGHT: u32 = 160;
+pub const WINDOW_SIZE_WIDTH: u32 = 256;
+pub const WINDOW_SIZE_HEIGHT: u32 = 146;
 
 pub const DARKMODE_DEFAULT: bool = true;

@@ -4,15 +4,16 @@ pub mod parameter;
 
 use std::{ hash::Hash, sync::{ Arc, RwLock }, time::Duration };
 use mlem_egui_themes::Theme;
-use nih_plug::prelude::*;
+use nih_plug::{formatters::v2s_f32_gain_to_db, prelude::*, util::gain_to_db};
 use nih_plug_egui::{ egui::{ self, Context, Ui }, EguiState };
 use interface_data::InterfaceData;
-use crate::{ consts, ConsoleReceiver, PluginImplementationParams, RuntimeData };
+use crate::{ ConsoleReceiver, PluginImplementationParams, RuntimeData, consts, interface::interface_utils::{help_label, parameter_label} };
 
 const DEFAULT_SPACE: f32 = 4.0;
+const LABEL_WIDTH: f32 = 64.0;
 const TOP_ID: &str = "Top";
 const DEFAULT_MENU_WIDTH: f32 = 64.0;
-const ABOUT_MENU_WIDTH: f32 = 256.0;
+const ABOUT_MENU_WIDTH: f32 = consts::WINDOW_SIZE_WIDTH as f32 - DEFAULT_MENU_WIDTH - 32.0;
 const ABOUT_LICENSE_SCROLL_HEIGHT: f32 = 128.0;
 const CONSOLE_MAIN_ID: &str = "Central/Console/Main";
 const CONSOLE_ICON: &str = "\u{E47E}";
@@ -104,7 +105,7 @@ impl Interface {
         });
 
         egui::CentralPanel::default().show(egui_ctx, |ui| {
-            self.draw_center(ui, &runtime_data);
+            self.draw_center(ui, &runtime_data, &mut interface_data);
         });
     }
     
@@ -146,53 +147,57 @@ impl Interface {
                 self.draw_name(ui);
                 ui.label(consts::DESCRIPTION);
                 ui.separator();
-                self.draw_info(ui);
-            });
-
-            ui.menu_button("License", |ui| {
-                ui.set_max_width(ABOUT_MENU_WIDTH);    
 
                 egui::ScrollArea::vertical().max_height(ABOUT_LICENSE_SCROLL_HEIGHT).show(ui, |ui| {
-                    ui.monospace(format!("{}", consts::LICENSE_CONTENTS));        
-                });
-            });
+                    self.draw_info(ui);
+                
+                    ui.separator();
+                    ui.label("Credits");
 
-            ui.menu_button("Credits", |ui| {
-                ui.set_max_width(ABOUT_MENU_WIDTH);    
-
-                egui::ScrollArea::vertical().max_height(ABOUT_LICENSE_SCROLL_HEIGHT).show(ui, |ui| {
                     ui.monospace(format!("By {authors}", authors = consts::AUTHORS));
                     ui.separator();
-                    ui.monospace(format!("{}", consts::CREDITS));        
+                    ui.monospace(format!("{}", consts::CREDITS));     
+
+                    ui.separator();
+                    ui.label("License");
+                    ui.monospace(format!("{}", consts::LICENSE_CONTENTS));        
                 });
             });
         });
     }
 
-    fn draw_center(&mut self, ui: &mut Ui, runtime_data: &RuntimeData) {
+    fn draw_center(&mut self, ui: &mut Ui, runtime_data: &RuntimeData, interface_data: &mut InterfaceData) {
         if self.show_console { 
             self.draw_console(ui, runtime_data, CONSOLE_MAIN_ID);
             return; 
         }
 
         ui.horizontal(|ui| {
-            ui.label("Global:");
-            ui.monospace(format!("{: >4.2} lufs", runtime_data.lufs_global_loudness));
+            parameter_label(ui, "Integrated", "Loudness total since reset.",LABEL_WIDTH);
+
+            ui.monospace(format!("{: >5.2} lufs", runtime_data.lufs_global_loudness));
         });
 
         ui.horizontal(|ui| {
-            ui.label("Momentary:");
-            ui.monospace(format!("{: >4.2} lufs", runtime_data.lufs_momentary_loudness));
+            parameter_label(ui, "Momentary", "Loudness over a duration of 0.4 seconds.", LABEL_WIDTH);
+
+            ui.monospace(format!("{: >5.2} lufs", runtime_data.lufs_momentary_loudness));
+            ui.add_space(DEFAULT_SPACE);
+            ui.monospace(format!("{: >5.2} db", gain_to_db(1.0 + runtime_data.rms_momentary_loudness)));
         });
 
         ui.horizontal(|ui| {
-            ui.label("Short Term:");
-            ui.monospace(format!("{: >4.2} lufs", runtime_data.lufs_shortterm_loudness));
+            parameter_label(ui, "Short Term", "Loudness over a duration of 3 seconds.", LABEL_WIDTH);
+
+            ui.monospace(format!("{: >5.2} lufs", runtime_data.lufs_shortterm_loudness));
+            ui.add_space(DEFAULT_SPACE);
+            ui.monospace(format!("{: >5.2} db", gain_to_db(1.0 + runtime_data.rms_shortterm_loudness)));
         });
 
         ui.horizontal(|ui| {
-            ui.label("Range:");
-            ui.monospace(format!("{: >4.2} lufs", runtime_data.lufs_range_loudness));
+            parameter_label(ui, "Range", "Loudness range total since reset.", LABEL_WIDTH);
+
+            ui.monospace(format!("{: >5.2} lufs", runtime_data.lufs_range_loudness));
         });
 
         ui.add_space(ui.available_height() - 12.0);
@@ -201,7 +206,7 @@ impl Interface {
             let minutes = f32::floor(seconds / 60.0);
             
             if ui.button("Reset").clicked() {
-                //TODO implement
+                interface_data.reset_meter();
             }
             ui.label(format!("{minutes: >1.0}m{seconds: >1.0}s", minutes = minutes, seconds = seconds - minutes * 60.0));
         });
@@ -238,9 +243,10 @@ impl Interface {
     }
 
     fn draw_info(&mut self, ui: &mut Ui) {
+        ui.label(format!("v{version} {profile} ({id})", version = consts::VERSION, profile = consts::BUILD_TYPE, id = consts::BUILD_ID));
         ui.horizontal(|ui| {
-            ui.label(format!("v{version} {profile} ({id}) by", version = consts::VERSION, profile = consts::BUILD_TYPE, id = consts::BUILD_ID));
-            ui.hyperlink_to(consts::PLUGIN_VENDOR, consts::HOMEPAGE)
+            ui.label("By");
+            ui.hyperlink_to(consts::PLUGIN_VENDOR, consts::HOMEPAGE);
         });
     }
 

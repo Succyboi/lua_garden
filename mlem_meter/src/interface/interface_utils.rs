@@ -1,6 +1,6 @@
 use nih_plug_egui::egui::{self, RichText, Ui, Vec2, WidgetText};
 
-pub const TOOLTIP_HOVER_WIDTH: f32 = 300.0;
+pub const TOOLTIP_HOVER_WIDTH: f32 = 256.0;
 
 pub fn help_label(ui: &mut Ui, text: impl Into<RichText>) {    
     ui.add_enabled_ui(false, |ui| {
@@ -21,4 +21,13 @@ pub fn toggle_value(ui: &mut Ui, value: &mut bool, true_text: impl Into<WidgetTe
             *value = !*value;
         }
     }
+}
+
+pub fn parameter_label(ui: &mut Ui, text: impl Into<WidgetText>, tooltip_text: impl Into<RichText>, width: f32) {
+    //TODO align left
+
+    ui.add_sized([width, 10.0], egui::Label::new(text)).on_hover_ui(|ui| {
+        ui.set_max_width(TOOLTIP_HOVER_WIDTH);
+        ui.monospace(tooltip_text);
+    });
 }

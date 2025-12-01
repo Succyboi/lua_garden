@@ -12,7 +12,7 @@ impl Parameter {
         ui.add(
             egui::DragValue::new(&mut self.value)
                 .speed((self.max - self.min) * (1.0 / DEFAULT_DRAG_PIXEL_DISTANCE))
-                .clamp_range(self.min..=self.max)
+                .range(self.min..=self.max)
                 .min_decimals(MIN_DECIMALS)
                 .max_decimals(MAX_DECIMALS),
         ).on_hover_text(&self.name); // TODO better hover preview

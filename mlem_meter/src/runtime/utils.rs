@@ -17,6 +17,10 @@ impl Timer {
         return timer;
     }
     
+    pub fn reset(&mut self) {
+        self.instant = Instant::now();
+    }
+
     pub fn elapsed_ms(&self) -> f32 {
         return self.instant.elapsed().as_nanos() as f32 / 1000000.0;
     }
@@ -31,9 +35,9 @@ pub struct RMS {
 }
 
 impl RMS {
-    pub fn new() -> RMS {
+    pub fn new(window_size_ms: f32) -> RMS {
         let rms = Self {
-            window_size_ms: 1.0,
+            window_size_ms: window_size_ms,
 
             state: 0.0
         };

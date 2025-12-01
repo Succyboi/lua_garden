@@ -2,7 +2,7 @@ pub mod utils;
 pub mod runtime_data;
 pub mod parameter;
 
-use std::fmt::Error;
+use std::{ fmt::Error };
 
 use crate::{console::ConsoleSender, runtime::runtime_data::RuntimeData};
 use nih_plug::prelude::*;
@@ -15,17 +15,18 @@ pub struct Runtime {
     sample_rate: f32,
     buffer_size: usize,
     channels: usize,
-    
+    meter_id: usize,
+
     active_time: Timer,
     lufs_global_loudness: f64,
     lufs_momentary_loudness: f64,
     lufs_range_loudness: f64,
     lufs_shortterm_loudness: f64,
-    lufs_window_loudness: f64,
     
-    // TODO RMS
+    rms_momentary_loudness: RMS,
+    rms_shortterm_loudness: RMS,
 
-    run_time_rms: RMS,
+    run_time: RMS,
     ebur128: Option<EbuR128>,
     clip: bool
 }
@@ -38,15 +39,18 @@ impl Runtime {
             sample_rate: 0.0,
             buffer_size: 0,
             channels: 0,
+            meter_id: 0,
 
             active_time: Timer::new(),
             lufs_global_loudness: 0.0,
             lufs_momentary_loudness: 0.0,
             lufs_range_loudness: 0.0,
             lufs_shortterm_loudness: 0.0,
-            lufs_window_loudness: 0.0,
+
+            rms_momentary_loudness: RMS::new(0.4),
+            rms_shortterm_loudness: RMS::new(3.0),
             
-            run_time_rms: RMS::new(),
+            run_time: RMS::new(1.0),
             ebur128: None,
             clip: crate::consts::BUILD_IS_DEBUG
         };
@@ -66,6 +70,12 @@ impl Runtime {
     pub fn reset(&mut self) {
         let execute_timer = Timer::new();
 
+        /*TODO implement properly, panics on a bunch of expects
+        match self.reset_meter() {
+            Ok(()) => (),
+            Err(e) => self.log(format!("Failed to reset meter: {}", e))
+        }*/
+
         self.log(format!("Reset in {:.2}ms.", execute_timer.elapsed_ms()));
     }
 
@@ -81,6 +91,13 @@ impl Runtime {
             }
         }
 
+        for channel_samples in buffer.iter_samples() {                        
+            for sample in channel_samples {
+                self.rms_momentary_loudness.process(*sample, self.sample_rate);
+                self.rms_shortterm_loudness.process(*sample, self.sample_rate);
+            }
+        }
+
         if self.clip {
             for channel_samples in buffer.iter_samples() {                        
                 for sample in channel_samples {
@@ -89,28 +106,41 @@ impl Runtime {
             }
         }
 
-        self.run_time_rms.process( execute_timer.elapsed_ms(), self.sample_rate);
+        self.run_time.process( execute_timer.elapsed_ms(), self.sample_rate);
     }
 
     pub fn update_runtime_data(&mut self, runtime_data: &mut RuntimeData) {
         runtime_data.sample_rate = self.sample_rate;
         runtime_data.buffer_size = self.buffer_size;
         runtime_data.channels = self.channels;
-        runtime_data.run_ms = self.run_time_rms.get();
+        runtime_data.run_ms = self.run_time.get();
 
         runtime_data.active_time_ms = self.active_time.elapsed_ms();
+
         runtime_data.lufs_global_loudness = self.lufs_global_loudness;
         runtime_data.lufs_momentary_loudness = self.lufs_momentary_loudness;
         runtime_data.lufs_range_loudness = self.lufs_range_loudness;
         runtime_data.lufs_shortterm_loudness = self.lufs_shortterm_loudness;
-        runtime_data.lufs_window_loudness = self.lufs_window_loudness;
+
+        runtime_data.rms_momentary_loudness = self.rms_momentary_loudness.get();
+        runtime_data.rms_shortterm_loudness = self.rms_shortterm_loudness.get();
+
+        if runtime_data.meter_id != self.meter_id {
+            self.meter_id = runtime_data.meter_id;
+            self.active_time.reset();
+
+            match self.reset_meter() {
+                Ok(()) => (),
+                Err(e) => self.log(format!("Couldn't refresh EbuR128."))
+            }
+        }
     }
 
     fn run_ebur128(&mut self, buffer: &mut Buffer) -> Result<(), Error> {
         match &mut self.ebur128 {
             Some(_ebur128) => (),
             None => {
-                self.ebur128 = Some(EbuR128::new(self.channels as u32, self.sample_rate as u32, Mode::all()).expect("Couldn't create EbuR128"));
+                self.reset_meter().expect("Couldn't refresh EbuR128.");
             }
         };
 
@@ -127,7 +157,15 @@ impl Runtime {
         self.lufs_momentary_loudness = ebur128.loudness_momentary().expect("Couldn't get momentary loudness.");
         self.lufs_range_loudness = ebur128.loudness_range().expect("Couldn't get range loudness.");
         self.lufs_shortterm_loudness = ebur128.loudness_shortterm().expect("Couldn't get short term loudness.");
-        //self.lufs_window_loudness = ebur128.loudness_window(self.sample_rate as u32).expect("Couldn't get window loudness."); // TODO changeable window loudness
+
+        Ok(())
+    }
+
+    fn reset_meter(&mut self) -> Result<(), Error>  {
+        self.ebur128 = Some(EbuR128::new(self.channels as u32, self.sample_rate as u32, Mode::all()).expect("Couldn't create EbuR128"));
+
+        self.rms_momentary_loudness = RMS::new(0.4);
+        self.rms_shortterm_loudness = RMS::new(3.0);
 
         Ok(())
     }
