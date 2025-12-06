@@ -1,4 +1,4 @@
-use nih_plug_egui::egui::{self, RichText, Ui, Vec2, WidgetText};
+use nih_plug_egui::egui::{self, Align, Layout, RichText, Ui, Vec2, WidgetText};
 
 pub const TOOLTIP_HOVER_WIDTH: f32 = 256.0;
 

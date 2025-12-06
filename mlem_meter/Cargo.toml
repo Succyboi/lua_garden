@@ -1,6 +1,8 @@
 [package]
 name = "mlem_meter"
-authors = ["Puk Bruinsma / DJ ZITwerK <puk@mlemrecords.com>"]
+authors = [
+    "Puk Bruinsma / DJ ZITwerK <puk@mlemrecords.com>"
+    ]
 homepage = "https://mlemrecords.com"
 version = "0.1.0"
 edition = "2021"
