@@ -1,27 +1,31 @@
 pub mod interface_data;
 pub mod interface_utils;
-pub mod parameter;
+pub mod param_toggle;
 
-use std::{ hash::Hash, sync::{ Arc, RwLock }, time::Duration };
+use std::{ hash::Hash, sync::{ Arc, RwLock } };
 use mlem_egui_themes::Theme;
-use nih_plug::{formatters::v2s_f32_gain_to_db, prelude::*, util::gain_to_db};
-use nih_plug_egui::{ egui::{ self, Context, Ui }, EguiState };
+use nih_plug::{ prelude::*, util::gain_to_db };
+use nih_plug_egui::{ EguiState, egui::{ self, Align, Context, Layout, Ui } };
 use interface_data::InterfaceData;
 use crate::{ ConsoleReceiver, PluginImplementationParams, RuntimeData, consts, interface::interface_utils::{help_label, parameter_label} };
 
 const DEFAULT_SPACE: f32 = 4.0;
 const LABEL_WIDTH: f32 = 64.0;
 const TOP_ID: &str = "Top";
-const DEFAULT_MENU_WIDTH: f32 = 64.0;
-const ABOUT_MENU_WIDTH: f32 = consts::WINDOW_SIZE_WIDTH as f32 - DEFAULT_MENU_WIDTH - 32.0;
-const ABOUT_LICENSE_SCROLL_HEIGHT: f32 = 128.0;
 const CONSOLE_MAIN_ID: &str = "Central/Console/Main";
 const CONSOLE_ICON: &str = "\u{E47E}";
+
+#[derive(PartialEq)]
+pub enum InterfaceCenterView {
+    About,
+    Console,
+    Plugin
+}
 
 pub struct Interface {
     pub console: ConsoleReceiver,
 
-    show_console: bool,
+    center_view: InterfaceCenterView,
 
     theme: usize,
     themes: [mlem_egui_themes::Theme; 4],
@@ -32,12 +36,12 @@ impl Interface {
         return Self {
             console: ConsoleReceiver::new(),
 
-            show_console: false,
+            center_view: InterfaceCenterView::Plugin,
 
             theme: 0,
             themes: [
-                mlem_egui_themes::garden_night(),
                 mlem_egui_themes::garden_day(),
+                mlem_egui_themes::garden_night(),
                 mlem_egui_themes::garden_gameboy(),
                 mlem_egui_themes::garden_playdate()
             ]
@@ -94,8 +98,7 @@ impl Interface {
         egui::TopBottomPanel::top(TOP_ID).show(egui_ctx, |ui| {
             ui.horizontal(|ui| {
                 self.draw_about_button(ui);
-                self.draw_darkmode_toggle(egui_ctx, ui);
-                ui.label(consts::NAME);
+                //self.draw_darkmode_toggle(egui_ctx, ui);
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Max), |ui| {
                     self.draw_console_toggle(ui);
@@ -105,7 +108,7 @@ impl Interface {
         });
 
         egui::CentralPanel::default().show(egui_ctx, |ui| {
-            self.draw_center(ui, &runtime_data, &mut interface_data);
+            self.draw_center(ui, _setter, _params, &runtime_data, &mut interface_data);
         });
     }
     
@@ -122,14 +125,18 @@ impl Interface {
         let console_updated = self.console.update();
 
         ui.horizontal(|ui| {
-            let button_response = if self.show_console {
+            let button_response = if self.center_view == InterfaceCenterView::Console {
                 ui.button(format!("{icon} Hide", icon = CONSOLE_ICON))
             } else {
                 ui.button(CONSOLE_ICON)
             };
             
             if button_response.clicked() {
-                self.show_console = !self.show_console;
+                self.center_view = if self.center_view == InterfaceCenterView::Console {
+                    InterfaceCenterView::Plugin
+                } else {
+                    InterfaceCenterView::Console
+                };
             }
 
             if console_updated {
@@ -139,39 +146,36 @@ impl Interface {
     }
 
     fn draw_about_button(&mut self, ui: &mut Ui) {
-        ui.menu_button(format!("v{}", consts::VERSION), |ui| {
-            ui.set_max_width(DEFAULT_MENU_WIDTH);    
+        let button_response = if self.center_view == InterfaceCenterView::About {
+            ui.button(format!("{icon} Hide", icon = consts::ICON))
+        } else {
+            ui.button(format!("{icon} {name}", name = consts::NAME, icon = consts::ICON))
+        };
 
-            ui.menu_button("About", |ui|{
-                ui.set_max_width(ABOUT_MENU_WIDTH);
-                self.draw_name(ui);
-                ui.label(consts::DESCRIPTION);
-                ui.separator();
+        if button_response.clicked() {
+            self.center_view = if self.center_view == InterfaceCenterView::About {
+                InterfaceCenterView::Plugin
+            } else {
+                InterfaceCenterView::About
+            };
+        }
 
-                egui::ScrollArea::vertical().max_height(ABOUT_LICENSE_SCROLL_HEIGHT).show(ui, |ui| {
-                    self.draw_info(ui);
-                
-                    ui.separator();
-                    ui.label("Credits");
-
-                    ui.monospace(format!("By {authors}", authors = consts::AUTHORS));
-                    ui.separator();
-                    ui.monospace(format!("{}", consts::CREDITS));     
-
-                    ui.separator();
-                    ui.label("License");
-                    ui.monospace(format!("{}", consts::LICENSE_CONTENTS));        
-                });
+        ui.add_enabled_ui(false, |ui| {
+            ui.with_layout(Layout::bottom_up(Align::LEFT), |ui| {
+                ui.small(consts::DESCRIPTION);
             });
         });
     }
 
-    fn draw_center(&mut self, ui: &mut Ui, runtime_data: &RuntimeData, interface_data: &mut InterfaceData) {
-        if self.show_console { 
-            self.draw_console(ui, runtime_data, CONSOLE_MAIN_ID);
-            return; 
+    fn draw_center(&mut self, ui: &mut Ui, _setter: &ParamSetter, _params: Arc<PluginImplementationParams>, runtime_data: &RuntimeData, interface_data: &mut InterfaceData) {
+        match self.center_view {
+            InterfaceCenterView::About => self.draw_about(ui),
+            InterfaceCenterView::Console => self.draw_console(ui, runtime_data, CONSOLE_MAIN_ID),
+            InterfaceCenterView::Plugin => self.draw_plugin(ui, _setter, _params, runtime_data, interface_data),
         }
+    }
 
+    fn draw_plugin(&mut self, ui: &mut Ui, _setter: &ParamSetter, _params: Arc<PluginImplementationParams>, runtime_data: &RuntimeData, interface_data: &mut InterfaceData) {
         ui.horizontal(|ui| {
             parameter_label(ui, "Integrated", "Loudness total since reset.",LABEL_WIDTH);
 
@@ -208,7 +212,9 @@ impl Interface {
             if ui.button("Reset").clicked() {
                 interface_data.reset_meter();
             }
-            ui.label(format!("{minutes: >1.0}m{seconds: >1.0}s", minutes = minutes, seconds = seconds - minutes * 60.0));
+            ui.monospace(format!("{minutes: >1.0}m{seconds: >1.0}s", minutes = minutes, seconds = seconds - minutes * 60.0));
+            
+            // TODO toggle reset on play
         });
     }
 
@@ -235,6 +241,27 @@ impl Interface {
                         ui.monospace(format!("{}", log_string));
                 });
             });
+        });
+    }
+
+    fn draw_about(&mut self, ui: &mut Ui) {
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            self.draw_name(ui);
+            ui.label(consts::DESCRIPTION);
+            ui.separator();
+            
+            self.draw_info(ui);
+        
+            ui.separator();
+            ui.label("Credits");
+
+            ui.monospace(format!("By {authors}", authors = consts::AUTHORS));
+            ui.separator();
+            ui.monospace(format!("{}", consts::CREDITS));     
+
+            ui.separator();
+            ui.label("License");
+            ui.monospace(format!("{}", consts::LICENSE_CONTENTS));        
         });
     }
 

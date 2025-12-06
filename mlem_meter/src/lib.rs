@@ -21,6 +21,9 @@ pub struct PluginImplementation {
 pub struct PluginImplementationParams {
     #[persist = "editor-state"]
     editor_state: Arc<EguiState>,
+
+    #[id = "reset_on_play"]
+    reset_on_play: BoolParam,
 }
 
 impl Default for PluginImplementation {
@@ -39,7 +42,9 @@ impl Default for PluginImplementation {
 impl Default for PluginImplementationParams {
     fn default() -> Self {
         Self {
-            editor_state: EguiState::from_size(consts::WINDOW_SIZE_WIDTH, consts::WINDOW_SIZE_HEIGHT)
+            editor_state: EguiState::from_size(consts::WINDOW_SIZE_WIDTH, consts::WINDOW_SIZE_HEIGHT),
+
+            reset_on_play: BoolParam::new("Reset On Play", true)
         }
     }
 }
@@ -66,7 +71,7 @@ impl Plugin for PluginImplementation {
     const MIDI_INPUT: MidiConfig = MidiConfig::None;
     const MIDI_OUTPUT: MidiConfig = MidiConfig::None;
 
-    const SAMPLE_ACCURATE_AUTOMATION: bool = true;
+    const SAMPLE_ACCURATE_AUTOMATION: bool = false;
 
     type SysExMessage = ();
     type BackgroundTask = ();
@@ -91,10 +96,10 @@ impl Plugin for PluginImplementation {
     fn initialize(
         &mut self,
         _audio_io_layout: &AudioIOLayout,
-        _buffer_config: &BufferConfig,
+        buffer_config: &BufferConfig,
         _context: &mut impl InitContext<Self>,
     ) -> bool {
-        let _ = self.runtime.init(_buffer_config.sample_rate);
+        let _ = self.runtime.init(buffer_config.sample_rate);
 
         return true;
     }
@@ -110,15 +115,16 @@ impl Plugin for PluginImplementation {
         &mut self,
         buffer: &mut Buffer,
         _aux: &mut AuxiliaryBuffers,
-        _context: &mut impl ProcessContext<Self>,
+        context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
         let runtime_data_lock = self.runtime_data.clone();
         let mut runtime_data = runtime_data_lock.write().unwrap();
         let interface_data = self.interface_data.read().unwrap().clone();
+        let params = self.params.clone();
 
         runtime_data.update_from_interface(&interface_data);
 
-        self.runtime.run(buffer);
+        self.runtime.run(buffer, &params, context.transport());
         
         runtime_data.update_from_runtime(&mut self.runtime, &interface_data);
 

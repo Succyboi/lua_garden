@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use crate::interface::interface_data::InterfaceData;
 
-use super::{parameter::Parameter, Runtime};
+use super::Runtime;
 
 #[derive(Clone)]
 pub struct RuntimeData {

@@ -1,11 +1,10 @@
 pub mod utils;
 pub mod runtime_data;
-pub mod parameter;
 
 use std::{ fmt::Error };
 
-use crate::{console::ConsoleSender, runtime::runtime_data::RuntimeData};
-use nih_plug::prelude::*;
+use crate::{PluginImplementation, PluginImplementationParams, console::ConsoleSender, runtime::runtime_data::RuntimeData};
+use nih_plug::{params, prelude::*};
 use utils::{ RMS, Timer };
 use ebur128::{EbuR128, Mode};
 
@@ -16,6 +15,7 @@ pub struct Runtime {
     buffer_size: usize,
     channels: usize,
     meter_id: usize,
+    last_playing: bool,
 
     active_time: Timer,
     lufs_global_loudness: f64,
@@ -40,6 +40,7 @@ impl Runtime {
             buffer_size: 0,
             channels: 0,
             meter_id: 0,
+            last_playing: false,
 
             active_time: Timer::new(),
             lufs_global_loudness: 0.0,
@@ -79,10 +80,21 @@ impl Runtime {
         self.log(format!("Reset in {:.2}ms.", execute_timer.elapsed_ms()));
     }
 
-    pub fn run(&mut self, buffer: &mut Buffer) {
+    pub fn run(&mut self, buffer: &mut Buffer, params: &PluginImplementationParams, transport: &Transport) {
         self.buffer_size = buffer.samples();
         self.channels = buffer.channels();
         let execute_timer = Timer::new();
+
+        if params.reset_on_play.value() && self.last_playing != transport.playing {
+            self.last_playing = transport.playing;
+        
+            match self.reset_meter() {
+                Ok(()) => (),
+                Err(e) => {
+                    self.log(format!("Failed to reset meter: {}", e));
+                }
+            }
+        }
 
         match self.run_ebur128(buffer) {
             Ok(()) => (),

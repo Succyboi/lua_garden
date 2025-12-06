@@ -41,8 +41,14 @@ pub struct Theme {
 
 const GARDEN_FONT_NAME: &str = "Inter Regular";
 const GARDEN_FONT: &[u8] = include_bytes!("../static/fonts/inter_regular_v4-1.otf");
+const GARDEN_FONT_HEADING_SIZE: f32 = 18.0;
+const GARDEN_FONT_SMALL_SIZE: f32 = 8.0;
+const GARDEN_FONT_SIZE: f32 = 12.0;
+
 const GARDEN_MONO_FONT_NAME: &str = "Cozette";
 const GARDEN_MONO_FONT: &[u8] = include_bytes!("../static/fonts/cozette_vector_v1-25-2.otf");
+const GARDEN_MONO_FONT_SIZE: f32 = 13.0;
+
 const GARDEN_ICON_FONT_NAME: &str = "Phosphor";
 const GARDEN_ICON_FONT: &[u8] = include_bytes!("../static/fonts/phosphor_v2-1.ttf");
 
@@ -55,28 +61,28 @@ pub fn garden_day() -> Theme {
         icon_font_name: &GARDEN_ICON_FONT_NAME,
         icon_font_data: Some(&GARDEN_ICON_FONT),
         
-        font_heading_size: 18.0,
-        font_body_size: 12.0,
-        font_monospace_size: 13.0,
-        font_button_size: 12.0,
-        font_small_size: 8.0,
+        font_heading_size: GARDEN_FONT_HEADING_SIZE,
+        font_body_size: GARDEN_FONT_SIZE,
+        font_monospace_size: GARDEN_MONO_FONT_SIZE,
+        font_button_size: GARDEN_FONT_SIZE,
+        font_small_size: GARDEN_FONT_SMALL_SIZE,
         font_fallback_to_default: true,
 
         darkmode: true,
         selection_opacity: 1.0,
         shadow_opacity: 1.0,
     
-        background: Color32::from_hex("#eeefee").expect(COLOR_PARSING_ERROR),
+        background: Color32::from_hex("#F8F7F7").expect(COLOR_PARSING_ERROR),
 
-        f_high: Color32::from_hex("#222222").expect(COLOR_PARSING_ERROR),
-        f_med: Color32::from_hex("#00b9be").expect(COLOR_PARSING_ERROR),
-        f_low: Color32::from_hex("#bbbcbb").expect(COLOR_PARSING_ERROR),
-        f_inv: Color32::from_hex("#545454").expect(COLOR_PARSING_ERROR),
+        f_high: Color32::from_hex("#2b2b26").expect(COLOR_PARSING_ERROR),
+        f_med: Color32::from_hex("#8E8E93").expect(COLOR_PARSING_ERROR),
+        f_low: Color32::from_hex("#cfcfcf").expect(COLOR_PARSING_ERROR),
+        f_inv: Color32::from_hex("#5f5f5f").expect(COLOR_PARSING_ERROR),
     
-        b_high: Color32::from_hex("#545454").expect(COLOR_PARSING_ERROR),
-        b_med: Color32::from_hex("#ced0ce").expect(COLOR_PARSING_ERROR),
-        b_low: Color32::from_hex("#f5f5f5").expect(COLOR_PARSING_ERROR),
-        b_inv: Color32::from_hex("#ff3796").expect(COLOR_PARSING_ERROR)
+        b_high: Color32::from_hex("#5f5f5f").expect(COLOR_PARSING_ERROR),
+        b_med: Color32::from_hex("#cfcfcf").expect(COLOR_PARSING_ERROR),
+        b_low: Color32::from_hex("#F8F7F7").expect(COLOR_PARSING_ERROR),
+        b_inv: Color32::from_hex("#8E8E93").expect(COLOR_PARSING_ERROR)
     }
 }
 
@@ -89,11 +95,11 @@ pub fn garden_night() -> Theme {
         icon_font_name: &GARDEN_ICON_FONT_NAME,
         icon_font_data: Some(&GARDEN_ICON_FONT),
 
-        font_heading_size: 18.0,
-        font_body_size: 12.0,
-        font_monospace_size: 13.0,
-        font_button_size: 12.0,
-        font_small_size: 8.0,
+        font_heading_size: GARDEN_FONT_HEADING_SIZE,
+        font_body_size: GARDEN_FONT_SIZE,
+        font_monospace_size: GARDEN_MONO_FONT_SIZE,
+        font_button_size: GARDEN_FONT_SIZE,
+        font_small_size: GARDEN_FONT_SMALL_SIZE,
         font_fallback_to_default: true,
 
         darkmode: true,
@@ -123,11 +129,11 @@ pub fn garden_gameboy() -> Theme {
         icon_font_name: &GARDEN_ICON_FONT_NAME,
         icon_font_data: Some(&GARDEN_ICON_FONT),
 
-        font_heading_size: 18.0,
-        font_body_size: 12.0,
-        font_monospace_size: 13.0,
-        font_button_size: 12.0,
-        font_small_size: 8.0,
+        font_heading_size: GARDEN_FONT_HEADING_SIZE,
+        font_body_size: GARDEN_FONT_SIZE,
+        font_monospace_size: GARDEN_MONO_FONT_SIZE,
+        font_button_size: GARDEN_FONT_SIZE,
+        font_small_size: GARDEN_FONT_SMALL_SIZE,
         font_fallback_to_default: true,
 
         darkmode: true,
@@ -157,11 +163,11 @@ pub fn garden_playdate() -> Theme {
         icon_font_name: &GARDEN_ICON_FONT_NAME,
         icon_font_data: Some(&GARDEN_ICON_FONT),
 
-        font_heading_size: 18.0,
-        font_body_size: 12.0,
-        font_monospace_size: 13.0,
-        font_button_size: 12.0,
-        font_small_size: 8.0,
+        font_heading_size: GARDEN_FONT_HEADING_SIZE,
+        font_body_size: GARDEN_FONT_SIZE,
+        font_monospace_size: GARDEN_MONO_FONT_SIZE,
+        font_button_size: GARDEN_FONT_SIZE,
+        font_small_size: GARDEN_FONT_SMALL_SIZE,
         font_fallback_to_default: true,
 
         darkmode: true,
