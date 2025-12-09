@@ -18,9 +18,6 @@ pub struct RuntimeData {
     pub lufs_momentary_loudness: f64,
     pub lufs_range_loudness: f64,
     pub lufs_shortterm_loudness: f64,
-
-    pub rms_momentary_loudness: f32,
-    pub rms_shortterm_loudness: f32,
 }
 
 impl RuntimeData {
@@ -38,9 +35,6 @@ impl RuntimeData {
             lufs_momentary_loudness: 0.0,
             lufs_range_loudness: 0.0,
             lufs_shortterm_loudness: 0.0,
-
-            rms_momentary_loudness: 0.0,
-            rms_shortterm_loudness: 0.0
         }
     }
 

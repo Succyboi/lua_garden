@@ -7,7 +7,7 @@ use mlem_egui_themes::Theme;
 use nih_plug::{ prelude::*, util::gain_to_db };
 use nih_plug_egui::{ EguiState, egui::{ self, Align, Context, Layout, Ui } };
 use interface_data::InterfaceData;
-use crate::{ ConsoleReceiver, PluginImplementationParams, RuntimeData, consts, interface::interface_utils::{help_label, parameter_label} };
+use crate::{ ConsoleReceiver, PluginImplementationParams, RuntimeData, consts, interface::{interface_utils::{help_label, parameter_label}} };
 
 const DEFAULT_SPACE: f32 = 4.0;
 const LABEL_WIDTH: f32 = 64.0;
@@ -98,7 +98,7 @@ impl Interface {
         egui::TopBottomPanel::top(TOP_ID).show(egui_ctx, |ui| {
             ui.horizontal(|ui| {
                 self.draw_about_button(ui);
-                //self.draw_darkmode_toggle(egui_ctx, ui);
+                //self.draw_darkmode_toggle(egui_ctx, ui); Not now, implement saving this n stuff
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Max), |ui| {
                     self.draw_console_toggle(ui);
@@ -175,33 +175,31 @@ impl Interface {
         }
     }
 
-    fn draw_plugin(&mut self, ui: &mut Ui, _setter: &ParamSetter, _params: Arc<PluginImplementationParams>, runtime_data: &RuntimeData, interface_data: &mut InterfaceData) {
+    fn draw_plugin(&mut self, ui: &mut Ui, setter: &ParamSetter, params: Arc<PluginImplementationParams>, runtime_data: &RuntimeData, interface_data: &mut InterfaceData) {
         ui.horizontal(|ui| {
             parameter_label(ui, "Integrated", "Loudness total since reset.",LABEL_WIDTH);
 
-            ui.monospace(format!("{: >5.2} lufs", runtime_data.lufs_global_loudness));
+            ui.monospace(format!("{: >6.2} lufs", runtime_data.lufs_global_loudness));
         });
 
         ui.horizontal(|ui| {
             parameter_label(ui, "Momentary", "Loudness over a duration of 0.4 seconds.", LABEL_WIDTH);
 
-            ui.monospace(format!("{: >5.2} lufs", runtime_data.lufs_momentary_loudness));
+            ui.monospace(format!("{: >6.2} lufs", runtime_data.lufs_momentary_loudness));
             ui.add_space(DEFAULT_SPACE);
-            ui.monospace(format!("{: >5.2} db", gain_to_db(1.0 + runtime_data.rms_momentary_loudness)));
         });
 
         ui.horizontal(|ui| {
             parameter_label(ui, "Short Term", "Loudness over a duration of 3 seconds.", LABEL_WIDTH);
 
-            ui.monospace(format!("{: >5.2} lufs", runtime_data.lufs_shortterm_loudness));
+            ui.monospace(format!("{: >6.2} lufs", runtime_data.lufs_shortterm_loudness));
             ui.add_space(DEFAULT_SPACE);
-            ui.monospace(format!("{: >5.2} db", gain_to_db(1.0 + runtime_data.rms_shortterm_loudness)));
         });
 
         ui.horizontal(|ui| {
             parameter_label(ui, "Range", "Loudness range total since reset.", LABEL_WIDTH);
 
-            ui.monospace(format!("{: >5.2} lufs", runtime_data.lufs_range_loudness));
+            ui.monospace(format!("{: >6.2} lufs", runtime_data.lufs_range_loudness));
         });
 
         ui.add_space(ui.available_height() - 12.0);
@@ -214,7 +212,15 @@ impl Interface {
             }
             ui.monospace(format!("{minutes: >1.0}m{seconds: >1.0}s", minutes = minutes, seconds = seconds - minutes * 60.0));
             
-            // TODO toggle reset on play
+            ui.with_layout(Layout::right_to_left(Align::BOTTOM), |ui| {
+                let mut reset_on_play_value = params.reset_on_play.value();
+           
+                if ui.checkbox(&mut reset_on_play_value, "Reset On Play").clicked() {
+                    setter.begin_set_parameter(&params.reset_on_play);
+                    setter.set_parameter(&params.reset_on_play, reset_on_play_value);
+                    setter.end_set_parameter(&params.reset_on_play);
+                }
+            });
         });
     }
 

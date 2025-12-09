@@ -22,9 +22,6 @@ pub struct Runtime {
     lufs_momentary_loudness: f64,
     lufs_range_loudness: f64,
     lufs_shortterm_loudness: f64,
-    
-    rms_momentary_loudness: RMS,
-    rms_shortterm_loudness: RMS,
 
     run_time: RMS,
     ebur128: Option<EbuR128>,
@@ -47,9 +44,6 @@ impl Runtime {
             lufs_momentary_loudness: 0.0,
             lufs_range_loudness: 0.0,
             lufs_shortterm_loudness: 0.0,
-
-            rms_momentary_loudness: RMS::new(0.4),
-            rms_shortterm_loudness: RMS::new(3.0),
             
             run_time: RMS::new(1.0),
             ebur128: None,
@@ -85,9 +79,7 @@ impl Runtime {
         self.channels = buffer.channels();
         let execute_timer = Timer::new();
 
-        if params.reset_on_play.value() && self.last_playing != transport.playing {
-            self.last_playing = transport.playing;
-        
+        if params.reset_on_play.value() && !self.last_playing && transport.playing {        
             match self.reset_meter() {
                 Ok(()) => (),
                 Err(e) => {
@@ -95,18 +87,13 @@ impl Runtime {
                 }
             }
         }
+        self.last_playing = transport.playing;
+
 
         match self.run_ebur128(buffer) {
             Ok(()) => (),
             Err(e) => {
                 self.log(format!("Failed to run EbuR128: {}", e));
-            }
-        }
-
-        for channel_samples in buffer.iter_samples() {                        
-            for sample in channel_samples {
-                self.rms_momentary_loudness.process(*sample, self.sample_rate);
-                self.rms_shortterm_loudness.process(*sample, self.sample_rate);
             }
         }
 
@@ -134,12 +121,8 @@ impl Runtime {
         runtime_data.lufs_range_loudness = self.lufs_range_loudness;
         runtime_data.lufs_shortterm_loudness = self.lufs_shortterm_loudness;
 
-        runtime_data.rms_momentary_loudness = self.rms_momentary_loudness.get();
-        runtime_data.rms_shortterm_loudness = self.rms_shortterm_loudness.get();
-
         if runtime_data.meter_id != self.meter_id {
             self.meter_id = runtime_data.meter_id;
-            self.active_time.reset();
 
             match self.reset_meter() {
                 Ok(()) => (),
@@ -175,9 +158,7 @@ impl Runtime {
 
     fn reset_meter(&mut self) -> Result<(), Error>  {
         self.ebur128 = Some(EbuR128::new(self.channels as u32, self.sample_rate as u32, Mode::all()).expect("Couldn't create EbuR128"));
-
-        self.rms_momentary_loudness = RMS::new(0.4);
-        self.rms_shortterm_loudness = RMS::new(3.0);
+        self.active_time.reset();
 
         Ok(())
     }

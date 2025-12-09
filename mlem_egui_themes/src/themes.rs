@@ -81,7 +81,7 @@ pub fn garden_day() -> Theme {
     
         b_high: Color32::from_hex("#5f5f5f").expect(COLOR_PARSING_ERROR),
         b_med: Color32::from_hex("#cfcfcf").expect(COLOR_PARSING_ERROR),
-        b_low: Color32::from_hex("#F8F7F7").expect(COLOR_PARSING_ERROR),
+        b_low: Color32::from_hex("#e4e4e4").expect(COLOR_PARSING_ERROR),
         b_inv: Color32::from_hex("#8E8E93").expect(COLOR_PARSING_ERROR)
     }
 }
