@@ -7,7 +7,7 @@ use mlem_egui_themes::Theme;
 use nih_plug::{ prelude::*, util::gain_to_db };
 use nih_plug_egui::{ EguiState, egui::{ self, Align, Context, Layout, Ui } };
 use interface_data::InterfaceData;
-use crate::{ ConsoleReceiver, PluginImplementationParams, RuntimeData, consts, interface::{interface_utils::{help_label, parameter_label}} };
+use crate::{ ConsoleReceiver, PluginImplementationParams, RuntimeData, consts, interface::interface_utils::{help_label, parameter_grid, parameter_label} };
 
 const DEFAULT_SPACE: f32 = 4.0;
 const LABEL_WIDTH: f32 = 64.0;
@@ -176,32 +176,24 @@ impl Interface {
     }
 
     fn draw_plugin(&mut self, ui: &mut Ui, setter: &ParamSetter, params: Arc<PluginImplementationParams>, runtime_data: &RuntimeData, interface_data: &mut InterfaceData) {
-        ui.horizontal(|ui| {
-            parameter_label(ui, "Integrated", "Loudness total since reset.",LABEL_WIDTH);
+        parameter_grid(ui, "Meters", |ui| {
+            parameter_label(ui, "Integrated", "Loudness total since reset.", |ui| {
+                ui.monospace(format!("{: >6.2} lufs", runtime_data.lufs_global_loudness));
+            });
 
-            ui.monospace(format!("{: >6.2} lufs", runtime_data.lufs_global_loudness));
+            parameter_label(ui, "Momentary", "Loudness over a duration of 0.4 seconds.", |ui| {
+                ui.monospace(format!("{: >6.2} lufs", runtime_data.lufs_momentary_loudness));
+            });
+
+            parameter_label(ui, "Short Term", "Loudness over a duration of 3 seconds.", |ui| {
+                ui.monospace(format!("{: >6.2} lufs", runtime_data.lufs_shortterm_loudness));
+            });
+
+            parameter_label(ui, "Range", "Loudness range total since reset.", |ui| {
+                ui.monospace(format!("{: >6.2} lufs", runtime_data.lufs_range_loudness));
+            });
         });
-
-        ui.horizontal(|ui| {
-            parameter_label(ui, "Momentary", "Loudness over a duration of 0.4 seconds.", LABEL_WIDTH);
-
-            ui.monospace(format!("{: >6.2} lufs", runtime_data.lufs_momentary_loudness));
-            ui.add_space(DEFAULT_SPACE);
-        });
-
-        ui.horizontal(|ui| {
-            parameter_label(ui, "Short Term", "Loudness over a duration of 3 seconds.", LABEL_WIDTH);
-
-            ui.monospace(format!("{: >6.2} lufs", runtime_data.lufs_shortterm_loudness));
-            ui.add_space(DEFAULT_SPACE);
-        });
-
-        ui.horizontal(|ui| {
-            parameter_label(ui, "Range", "Loudness range total since reset.", LABEL_WIDTH);
-
-            ui.monospace(format!("{: >6.2} lufs", runtime_data.lufs_range_loudness));
-        });
-
+        
         ui.add_space(ui.available_height() - 12.0);
         ui.horizontal(|ui| {
             let seconds = runtime_data.active_time_ms / 1000.0;

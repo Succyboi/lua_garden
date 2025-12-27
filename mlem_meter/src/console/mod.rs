@@ -12,6 +12,7 @@ pub struct ConsoleReceiver {
     log_string: String
 }
 
+#[derive(Clone)]
 pub struct ConsoleSender {
     sender: Sender<ConsoleLog>
 }

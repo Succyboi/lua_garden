@@ -1,6 +1,9 @@
-use nih_plug_egui::egui::{self, Align, Layout, RichText, Ui, Vec2, WidgetText};
+use std::hash::Hash;
+
+use nih_plug_egui::egui::{self, Align, Grid, Layout, RichText, Ui, Vec2, WidgetText};
 
 pub const TOOLTIP_HOVER_WIDTH: f32 = 256.0;
+pub const GRID_SPACING: f32 = 4.0;
 
 pub fn help_label(ui: &mut Ui, text: impl Into<RichText>) {    
     ui.add_enabled_ui(false, |ui| {
@@ -23,11 +26,19 @@ pub fn toggle_value(ui: &mut Ui, value: &mut bool, true_text: impl Into<WidgetTe
     }
 }
 
-pub fn parameter_label(ui: &mut Ui, text: impl Into<WidgetText>, tooltip_text: impl Into<RichText>, width: f32) {
-    //TODO align left
+pub fn parameter_grid(ui: &mut Ui, hash: impl std::hash::Hash, add_contents: impl FnOnce(&mut Ui)) {
+    Grid::new(hash)
+        .num_columns(2)
+        .spacing([GRID_SPACING, GRID_SPACING])
+        .show(ui, add_contents);
+}
 
-    ui.add_sized([width, 10.0], egui::Label::new(text)).on_hover_ui(|ui| {
+pub fn parameter_label(ui: &mut Ui, text: impl Into<WidgetText>, tooltip_text: impl Into<RichText>, add_contents: impl FnOnce(&mut Ui)) {
+    ui.label(text).on_hover_ui(|ui| {
         ui.set_max_width(TOOLTIP_HOVER_WIDTH);
         ui.monospace(tooltip_text);
     });
+
+    ui.horizontal(add_contents);
+    ui.end_row();
 }

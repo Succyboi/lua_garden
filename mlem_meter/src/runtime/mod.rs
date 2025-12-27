@@ -1,12 +1,13 @@
 pub mod utils;
 pub mod runtime_data;
 
+use core::fmt;
 use std::{ fmt::Error };
 
-use crate::{PluginImplementation, PluginImplementationParams, console::ConsoleSender, runtime::runtime_data::RuntimeData};
-use nih_plug::{params, prelude::*};
+use crate::{ PluginImplementationParams, console::ConsoleSender, runtime::runtime_data::RuntimeData};
+use nih_plug::{ prelude::* };
 use utils::{ RMS, Timer };
-use ebur128::{EbuR128, Mode};
+use ebur128::{ EbuR128, Mode };
 
 pub struct Runtime {
     pub console: Option<ConsoleSender>,
@@ -59,17 +60,16 @@ impl Runtime {
         let execute_timer = Timer::new();
         let execute_time = execute_timer.elapsed_ms();
         
-        self.log(format!("Initialization took {:.2}ms.", execute_time));
+        self.log(format!("Init in {:.2}ms.", execute_time));
     }
 
     pub fn reset(&mut self) {
         let execute_timer = Timer::new();
 
-        /*TODO implement properly, panics on a bunch of expects
         match self.reset_meter() {
             Ok(()) => (),
             Err(e) => self.log(format!("Failed to reset meter: {}", e))
-        }*/
+        }
 
         self.log(format!("Reset in {:.2}ms.", execute_timer.elapsed_ms()));
     }
@@ -126,38 +126,44 @@ impl Runtime {
 
             match self.reset_meter() {
                 Ok(()) => (),
-                Err(e) => self.log(format!("Couldn't refresh EbuR128."))
+                Err(e) => self.log(format!("Couldn't refresh EbuR128: {}", e))
             }
         }
     }
 
-    fn run_ebur128(&mut self, buffer: &mut Buffer) -> Result<(), Error> {
+    fn run_ebur128(&mut self, buffer: &mut Buffer) -> Result<(), ebur128::Error> {
         match &mut self.ebur128 {
             Some(_ebur128) => (),
             None => {
-                self.reset_meter().expect("Couldn't refresh EbuR128.");
+                self.reset_meter()?;
             }
         };
 
-        let ebur128 = self.ebur128.as_mut().expect("No EbuR128."); 
         for block_channel in buffer.iter_blocks(buffer.samples()) {     
             for channel in 0..block_channel.1.channels() {
-                let block_channel_samples = block_channel.1.get(channel).expect("Could not get samples from block.");
-
-                ebur128.add_frames_f32(block_channel_samples).expect("Couldn't add frames.");
+                match block_channel.1.get(channel) {
+                    Some(samples) => {
+                        let ebur128 = self.ebur128.as_mut().expect("No EbuR128.");
+                        ebur128.add_frames_f32(samples)?;
+                    },
+                    None => {
+                        self.log(format!("Could not get samples from block."));
+                    }
+                };
             }
         }
 
-        self.lufs_global_loudness = ebur128.loudness_global().expect("Couldn't get global loudness.");
-        self.lufs_momentary_loudness = ebur128.loudness_momentary().expect("Couldn't get momentary loudness.");
-        self.lufs_range_loudness = ebur128.loudness_range().expect("Couldn't get range loudness.");
-        self.lufs_shortterm_loudness = ebur128.loudness_shortterm().expect("Couldn't get short term loudness.");
+        let ebur128 = self.ebur128.as_ref().expect("No EbuR128.");
+        self.lufs_global_loudness = ebur128.loudness_global()?;
+        self.lufs_momentary_loudness = ebur128.loudness_momentary()?;
+        self.lufs_range_loudness = ebur128.loudness_range()?;
+        self.lufs_shortterm_loudness = ebur128.loudness_shortterm()?;
 
         Ok(())
     }
 
-    fn reset_meter(&mut self) -> Result<(), Error>  {
-        self.ebur128 = Some(EbuR128::new(self.channels as u32, self.sample_rate as u32, Mode::all()).expect("Couldn't create EbuR128"));
+    fn reset_meter(&mut self) -> Result<(), ebur128::Error>  {
+        self.ebur128 = Some(EbuR128::new(self.channels as u32, self.sample_rate as u32, Mode::all())?);
         self.active_time.reset();
 
         Ok(())
