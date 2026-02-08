@@ -18,6 +18,8 @@ Published builds contain CLAP, VST3 and Standalone versions.
     > Takes files as input, outputs audio.
     > 
     > ![mlem_data](mlem_data/preview.png)
+    - TODO folder loading
+    - TODO file and playback % display
 - [lua_garden_plug](lua_garden_plug) - Total WIP.
 - mlem_dynrange - TBM - A manual linear dynamic range remapper. 
 
