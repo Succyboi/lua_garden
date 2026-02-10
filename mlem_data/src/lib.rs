@@ -36,14 +36,17 @@ pub struct MeterParams {
     channels: AtomicUsize,
     run_ms: AtomicF32,
     
-    load_path: Mutex<Option<String>>,
+    path_refresh: AtomicBool,
+    paths: Mutex<Vec<String>>,
+    path_current: AtomicUsize,
     data_preview: Mutex<[u8; DATA_PREVIEW_SIZE_FULL]>,
     data_progress: AtomicF32
 }
 
 pub struct MeterImplementation { 
     params: Arc<MeterParams>,
-    open_file_dialog: Mutex<FileDialog>
+    open_file_dialog: Mutex<FileDialog>,
+    select_folder_dialog: Mutex<FileDialog>
 }
 
 impl Default for Meter {
@@ -73,7 +76,9 @@ impl Default for MeterParams {
             channels: AtomicUsize::new(0),
             run_ms: AtomicF32::new(0.0),
 
-            load_path: Mutex::from(None),
+            path_refresh: AtomicBool::new(false),
+            paths: Mutex::from(Vec::new()),
+            path_current: AtomicUsize::new(0),
             data_preview: Mutex::from([0; DATA_PREVIEW_SIZE_FULL]),
             data_progress: AtomicF32::new(0.0)
         }
@@ -94,6 +99,10 @@ impl PluginImplementation<MeterParams> for MeterImplementation {
         return Self {
             params: params.clone(),
             open_file_dialog: Mutex::from(FileDialog::open_file(None)
+                .resizable(false)
+                .default_size(Vec2::new(PLUGIN_METADATA.window_width  as f32 - interface::DEFAULT_SPACE * 8.0, PLUGIN_METADATA.window_height as f32 / 2.0))
+                .show_rename(false)),
+            select_folder_dialog: Mutex::from(FileDialog::select_folder(None)
                 .resizable(false)
                 .default_size(Vec2::new(PLUGIN_METADATA.window_width  as f32 - interface::DEFAULT_SPACE * 8.0, PLUGIN_METADATA.window_height as f32 / 2.0))
                 .show_rename(false))
@@ -133,7 +142,8 @@ impl PluginImplementation<MeterParams> for MeterImplementation {
 
     fn interface_update_bar(&self, ui: &mut Ui, ctx: &Context, setter: &ParamSetter) {
         self.bar_mute(ui, setter);
-        self.bar_open(ui, ctx);
+        self.bar_file(ui, ctx);
+        self.bar_folder(ui, ctx);
     }
 }
 
@@ -142,17 +152,56 @@ impl MeterImplementation {
         ui.add(param_toggle::ParamToggle::for_param(&self.params.mute, setter, "Mute", "Mute").fill(false));
     }
 
-    fn bar_open(&self, ui: &mut Ui, ctx: &Context) {
+    fn bar_file(&self, ui: &mut Ui, ctx: &Context) {
         let mut open_file_dialog = self.open_file_dialog.lock().unwrap();
-        if (ui.button("Open")).clicked() {
-            open_file_dialog.open();
-        }
+        let select_folder_dialog = self.select_folder_dialog.lock().unwrap();
+
+        ui.add_enabled_ui(!open_file_dialog.visible() && !select_folder_dialog.visible(), |ui| {
+            if (ui.button("File")).clicked() {
+                open_file_dialog.open();
+            }
+        });
+
 
         if open_file_dialog.show(ctx).selected() {
             if let Some(path) = open_file_dialog.path() {
                 let Ok(path) = String::from_str(&path.to_string_lossy());
-                let mut load_path = self.params.load_path.lock().unwrap();
-                *load_path = Some(path);
+                let mut paths = self.params.paths.lock().unwrap();
+                paths.clear();
+                paths.push(path);
+                self.params.path_refresh.store(true, Ordering::Relaxed);
+                self.params.path_current.store(paths.len(), Ordering::Relaxed);
+            }
+        }
+    }
+
+    fn bar_folder(&self, ui: &mut Ui, ctx: &Context) {
+        let mut select_folder_dialog = self.select_folder_dialog.lock().unwrap();
+        let open_file_dialog = self.open_file_dialog.lock().unwrap();
+
+        ui.add_enabled_ui(!open_file_dialog.visible() && !select_folder_dialog.visible(), |ui| {
+            if (ui.button("Folder")).clicked() {
+                select_folder_dialog.open();
+            }
+        });
+
+        if select_folder_dialog.show(ctx).selected() {
+            if let Some(path) = select_folder_dialog.path() {
+                let mut paths = self.params.paths.lock().unwrap();
+                paths.clear();
+
+                let Ok(path) = String::from_str(&path.to_string_lossy());
+                if let Ok(directory) = std::fs::read_dir(path) {
+                    for file in directory {
+                        if let Ok(file) = file {
+                            let Ok(path) = String::from_str(&file.path().to_string_lossy());
+                            paths.push(path);
+                        } 
+                    }
+                }
+
+                self.params.path_refresh.store(true, Ordering::Relaxed);
+                self.params.path_current.store(paths.len(), Ordering::Relaxed);
             }
         }
     }
@@ -164,9 +213,11 @@ impl MeterImplementation {
             data_string.push_str(format!("{:02X?}", data_preview[i]).as_str());
         }
 
-        let load_path = self.params.load_path.lock().unwrap();
-        if let Some(mut path) = (*load_path).clone() {
-            path.truncate(MAX_MONOSPACE_WIDTH - 5);
+        let paths = self.params.paths.lock().unwrap();
+        let path_current = self.params.path_current.load(Ordering::Relaxed);
+        if  path_current < paths.len() {
+            let mut path = paths[path_current].clone();
+            path.truncate(MAX_MONOSPACE_WIDTH - 7);
 
             for _ in 0..path.len() {
                 data_string.pop();

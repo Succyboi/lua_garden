@@ -24,7 +24,6 @@ pub struct Runtime {
     channels: usize,
     last_playing: bool,
 
-    file_path: Option<String>,
     file_offset: u64,
     file_len: u64,
     data: [u8; MAX_DATA_SIZE],
@@ -45,7 +44,6 @@ impl Runtime {
             channels: 0,
             last_playing: false,
             
-            file_path: None,
             file_offset: 0,
             file_len: 0,
             data: [0; MAX_DATA_SIZE],
@@ -83,16 +81,10 @@ impl Runtime {
 
         self.last_playing = transport.playing;
 
-
-        let load_path = params.load_path.lock().unwrap();
-        if let Some(path) = (*load_path).clone() {
-            if self.file_path != Some(path.clone()) {
-                self.file_path = Some(path.clone());
-                self.file_offset = 0;
-                if let Err(err) = self.update_data_from_file() {
-                    self.log(format!("Failed to load file at path \"{path}\": {err}"));
-                }
-            }
+        let refresh_path = params.path_refresh.load(Ordering::Relaxed);
+        if refresh_path {
+            let _ = self.update_data_from_file(params);
+            params.path_refresh.store(false, Ordering::Relaxed);
         }
 
         let mut data_preview = params.data_preview.lock().unwrap();
@@ -134,31 +126,31 @@ impl Runtime {
     fn next_value(&mut self, params: &MeterParams) -> f32 {
         match params.read_mode.value() {
             DataReadMode::Bit1 => {
-                let raw = self.next_bit();
+                let raw = self.next_bit(params);
                 return if raw { 1.0 } else { 0.0 };
             },
             DataReadMode::Bit4 => {
-                let raw = self.next_nibble();
+                let raw = self.next_nibble(params);
                 return raw as u8 as f32 / U4::MAX as u8 as f32 * 2.0 - 1.0;
             },
             DataReadMode::Bit8 => {
-                let raw = self.next_byte();
+                let raw = self.next_byte(params);
                 return raw as f32 / u8::MAX as f32 * 2.0 - 1.0;
             },
             DataReadMode::Bit16 => {
                 let raw = u16::from_ne_bytes([
-                    self.next_byte(), 
-                    self.next_byte()
+                    self.next_byte(params),
+                    self.next_byte(params)
                     ]);
                 return raw as f32 / u16::MAX as f32 * 2.0;
             }
         }
     }
     
-    fn next_nibble(&mut self) -> U4 {
+    fn next_nibble(&mut self, params: &MeterParams) -> U4 {
         let byte = if self.bit_pos >= 1 {
             self.bit_pos = 0;
-            self.next_byte()
+            self.next_byte(params)
         } else {
             self.curr_byte()
         };
@@ -169,10 +161,10 @@ impl Runtime {
         return value;
     }
 
-    fn next_bit(&mut self) -> bool {
+    fn next_bit(&mut self, params: &MeterParams) -> bool {
         let byte = if self.bit_pos >= 8 {
             self.bit_pos = 0;
-            self.next_byte()
+            self.next_byte(params)
         } else {
             self.curr_byte()
         };
@@ -182,12 +174,12 @@ impl Runtime {
         return (mask & byte) > 0;
     }
 
-    fn next_byte(&mut self) -> u8 {
+    fn next_byte(&mut self, params: &MeterParams) -> u8 {
         let byte = self.curr_byte();
         self.data_pos = self.data_pos + 1;
 
         if self.data_pos >= self.data_len {
-            let _ = self.update_data_from_file();
+            let _ = self.update_data_from_file(params);
             self.data_pos = 0;
         }
 
@@ -198,22 +190,33 @@ impl Runtime {
         return self.data[self.data_pos];
     }
 
-    fn update_data_from_file(&mut self) -> std::io::Result<()> {
-        if let Some(file_path) = &self.file_path {
-            let file = File::open(file_path)?;
-            self.file_len = file.metadata()?.len();
+    fn update_data_from_file(&mut self, params: &MeterParams) -> std::io::Result<()> {
+        let mut path_current = params.path_current.load(Ordering::Relaxed) + 1;
+        let paths = params.paths.lock().unwrap();
 
-            if self.file_len == 0 {
-                return Err(std::io::Error::new(io::ErrorKind::Other, "File length is 0."));
-            }
-
-            self.file_offset = (self.file_offset + self.data_len as u64) % self.file_len;
-            self.data_len = file.read_at(&mut self.data, self.file_offset)?;
-            self.data_pos = 0;
-
-            self.log(format!("File read {bytes} bytes at path \"{path}\" ({percent}%)", bytes = self.data_len, path = file_path, percent = f32::floor(self.file_offset as f32 / self.file_len as f32 * 100.0)));
+        if paths.len() <= 0 {
+            return Err(std::io::Error::new(io::ErrorKind::Other, "No paths available."));
         }
-        
+
+        if path_current >= paths.len() {
+            path_current = 0;
+        }
+
+        let file_path = &paths[path_current];
+        let file = File::open(file_path)?;
+        self.file_len = file.metadata()?.len();
+
+        if self.file_len == 0 {
+            return Err(std::io::Error::new(io::ErrorKind::Other, "File length is 0."));
+        }
+
+        self.file_offset = (self.file_offset + self.data_len as u64) % self.file_len;
+        self.data_len = file.read_at(&mut self.data, self.file_offset)?;
+        self.data_pos = 0;
+        params.path_current.store(path_current, Ordering::Relaxed);
+
+        self.log(format!("File read {bytes} bytes at path \"{path}\" ({percent}%)", bytes = self.data_len, path = file_path, percent = f32::floor(self.file_offset as f32 / self.file_len as f32 * 100.0)));
+    
         Ok(())
     }
 
