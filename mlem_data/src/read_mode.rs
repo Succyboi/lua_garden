@@ -5,6 +5,9 @@ pub enum DataReadMode {
     #[id = "bit1"]
     Bit1,
 
+    #[id = "bit4"]
+    Bit4,
+
     #[id = "bit8"]
     Bit8,
     

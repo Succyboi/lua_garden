@@ -6,6 +6,7 @@ use std::os::unix::fs::FileExt;
 use std::{ fmt::Error, sync::atomic::Ordering };
 use mlem_base::console::ConsoleSender;
 use nih_plug_egui::egui::load;
+use u4::{U4, U4x2};
 use crate::consts;
 use crate::read_mode::DataReadMode;
 use crate::{ MeterParams };
@@ -136,6 +137,10 @@ impl Runtime {
                 let raw = self.next_bit();
                 return if raw { 1.0 } else { 0.0 };
             },
+            DataReadMode::Bit4 => {
+                let raw = self.next_nibble();
+                return raw as u8 as f32 / U4::MAX as u8 as f32 * 2.0 - 1.0;
+            },
             DataReadMode::Bit8 => {
                 let raw = self.next_byte();
                 return raw as f32 / u8::MAX as f32 * 2.0 - 1.0;
@@ -150,6 +155,20 @@ impl Runtime {
         }
     }
     
+    fn next_nibble(&mut self) -> U4 {
+        let byte = if self.bit_pos >= 1 {
+            self.bit_pos = 0;
+            self.next_byte()
+        } else {
+            self.curr_byte()
+        };
+
+        let pair = U4x2::from_byte(byte);
+        let value = if self.bit_pos > 0 { pair.left() } else {pair.right() };
+        self.bit_pos = self.bit_pos + 1;
+        return value;
+    }
+
     fn next_bit(&mut self) -> bool {
         let byte = if self.bit_pos >= 8 {
             self.bit_pos = 0;

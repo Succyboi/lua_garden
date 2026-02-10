@@ -166,9 +166,9 @@ impl MeterImplementation {
 
         let load_path = self.params.load_path.lock().unwrap();
         if let Some(mut path) = (*load_path).clone() {
-            path.truncate(MAX_MONOSPACE_WIDTH - 4);
+            path.truncate(MAX_MONOSPACE_WIDTH - 5);
 
-            for _ in 0..path.len(){
+            for _ in 0..path.len() {
                 data_string.pop();
             }
 
