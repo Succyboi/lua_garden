@@ -28,10 +28,7 @@ pub struct Interface<T: PluginImplementation<U>, U: PluginParameters> {
     implementation: Arc<T>,
     params: Arc<U>,
 
-    center_view: InterfaceCenterViewState,
-
-    theme: usize,
-    themes: [mlem_egui_themes::Theme; 4],
+    center_view: InterfaceCenterViewState
 }
 
 impl<T: PluginImplementation<U>, U: PluginParameters> Interface<T, U> {
@@ -44,15 +41,7 @@ impl<T: PluginImplementation<U>, U: PluginParameters> Interface<T, U> {
             implementation,
             params: params,
 
-            center_view: InterfaceCenterViewState::Plugin,
-
-            theme: 0,
-            themes: [
-                mlem_egui_themes::garden_day(),
-                mlem_egui_themes::garden_night(),
-                mlem_egui_themes::garden_gameboy(),
-                mlem_egui_themes::garden_playdate()
-            ]
+            center_view: InterfaceCenterViewState::Plugin
         };
     }
 
@@ -107,15 +96,6 @@ impl<T: PluginImplementation<U>, U: PluginParameters> Interface<T, U> {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             self.draw_center(ui, ctx, setter);
-        });
-    }
-    
-    fn draw_darkmode_toggle(&mut self, egui_ctx: &Context, ui: &mut Ui) {
-        ui.horizontal_top(|ui| {
-            if ui.button("\u{E472}").clicked() {
-                self.theme = (self.theme + 1) % self.themes.len();
-                mlem_egui_themes::set_theme(egui_ctx, self.get_theme());
-            }
         });
     }
 
@@ -239,6 +219,6 @@ impl<T: PluginImplementation<U>, U: PluginParameters> Interface<T, U> {
     }
 
     fn get_theme(&self) -> Theme {
-        return self.themes[self.theme];
+        return self.metadata.window_theme;
     }
 }

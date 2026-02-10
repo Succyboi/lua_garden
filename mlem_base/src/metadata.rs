@@ -1,3 +1,4 @@
+use mlem_egui_themes::Theme;
 use nih_plug::{ prelude::* };
 use crate::consts;
 
@@ -26,7 +27,8 @@ pub struct PluginMetadata {
     pub vst3_subcategories: &'static [Vst3SubCategory],
 
     pub window_width: u32,
-    pub window_height: u32
+    pub window_height: u32,
+    pub window_theme: Theme
 }
 
 impl PluginMetadata {
@@ -50,7 +52,8 @@ impl PluginMetadata {
         vst3_subcategories: &'static [Vst3SubCategory],
         
         window_width: u32,
-        window_height: u32
+        window_height: u32,
+        window_theme: Theme
     ) -> Self {
         Self {
             build_type: consts::BUILD_TYPE,
@@ -76,7 +79,8 @@ impl PluginMetadata {
             vst3_subcategories,
             
             window_width,
-            window_height
+            window_height,
+            window_theme
         }
     }
 }

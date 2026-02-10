@@ -9,12 +9,14 @@ use runtime::{ Runtime };
 use mlem_base::{ interface::{ Interface }, PluginImplementation };
 use nih_plug::prelude::*;
 use std::{ffi::OsStr, ops::Deref, path::{Path, PathBuf}, str::FromStr, sync::{ Arc, Mutex, atomic::{AtomicBool, AtomicUsize, Ordering} }};
-use nih_plug_egui::{EguiState, egui::{Align, Context, Layout, Ui, Vec2}};
+use nih_plug_egui::{EguiState, egui::{Align, Context, Label, Layout, RichText, TextFormat, Ui, Vec2, text::LayoutJob}};
 use consts::PLUGIN_METADATA;
 
 use crate::read_mode::DataReadMode;
 
-pub const DATA_PREVIEW_SIZE: usize = 61 * 7;
+pub const MAX_MONOSPACE_WIDTH: usize = 61;
+pub const DATA_PREVIEW_SIZE_FULL: usize = MAX_MONOSPACE_WIDTH * 12;
+pub const DATA_PREVIEW_SIZE_SMALL: usize = DATA_PREVIEW_SIZE_FULL - MAX_MONOSPACE_WIDTH * 5;
 
 pub struct Meter {
     runtime: Runtime,
@@ -35,7 +37,8 @@ pub struct MeterParams {
     run_ms: AtomicF32,
     
     load_path: Mutex<Option<String>>,
-    data_preview: Mutex<[u8; DATA_PREVIEW_SIZE]>
+    data_preview: Mutex<[u8; DATA_PREVIEW_SIZE_FULL]>,
+    data_progress: AtomicF32
 }
 
 pub struct MeterImplementation { 
@@ -71,7 +74,8 @@ impl Default for MeterParams {
             run_ms: AtomicF32::new(0.0),
 
             load_path: Mutex::from(None),
-            data_preview: Mutex::from([0; DATA_PREVIEW_SIZE])
+            data_preview: Mutex::from([0; DATA_PREVIEW_SIZE_FULL]),
+            data_progress: AtomicF32::new(0.0)
         }
     }
 }
@@ -108,20 +112,21 @@ impl PluginImplementation<MeterParams> for MeterImplementation {
 
     fn interface_update_center(&self, ui: &mut Ui, _ctx: &Context, setter: &ParamSetter) {
         ui.horizontal(|ui| {
-            ui.add(param_toggle::ParamToggle::for_param(&self.params.mono, setter, "Mono", "Stereo"));
-            ui.add(param_combo_box::ParamComboBox::for_param(&self.params.read_mode, setter));
+            ui.add(param_toggle::ParamToggle::for_param(&self.params.mono, setter, "Mono", "Stereo").fill(false));
+            ui.add(param_combo_box::ParamComboBox::for_param(&self.params.read_mode, setter).fill(false));
         });
         
         ui.with_layout(Layout::bottom_up(Align::Min), |ui| {
-            ui.monospace(consts::DISCLAIMER);
-            ui.separator();
-
-            let data_preview = *self.params.data_preview.lock().unwrap();
-            let mut data_string = String::new();
-            for i in 0..data_preview.len() {
-                data_string.push_str(format!("{:02X?}", data_preview[i]).as_str());
+            if self.params.mute.value() {
+                ui.monospace(consts::DISCLAIMER);
+                ui.separator();
             }
-            ui.monospace(data_string);
+
+            ui.add_enabled_ui(!self.params.mute.value(), |ui| {
+                let data_string = self.build_data_string(if self.params.mute.value() { DATA_PREVIEW_SIZE_SMALL } else { DATA_PREVIEW_SIZE_FULL });
+
+                ui.monospace(data_string);
+            });
             ui.separator();
         });
     }
@@ -134,7 +139,7 @@ impl PluginImplementation<MeterParams> for MeterImplementation {
 
 impl MeterImplementation {
     fn bar_mute(&self, ui: &mut Ui, setter: &ParamSetter) {
-        ui.add(param_toggle::ParamToggle::for_param(&self.params.mute, setter, "Mute", "Mute"));
+        ui.add(param_toggle::ParamToggle::for_param(&self.params.mute, setter, "Mute", "Mute").fill(false));
     }
 
     fn bar_open(&self, ui: &mut Ui, ctx: &Context) {
@@ -150,6 +155,37 @@ impl MeterImplementation {
                 *load_path = Some(path);
             }
         }
+    }
+
+    fn build_data_string(&self, length: usize) -> String {
+        let mut data_string = String::new();
+        let data_preview = *self.params.data_preview.lock().unwrap();
+        for i in 0..length {
+            data_string.push_str(format!("{:02X?}", data_preview[i]).as_str());
+        }
+
+        let load_path = self.params.load_path.lock().unwrap();
+        if let Some(mut path) = (*load_path).clone() {
+            path.truncate(MAX_MONOSPACE_WIDTH - 4);
+
+            for _ in 0..path.len(){
+                data_string.pop();
+            }
+
+            data_string.pop();
+            data_string.pop();
+            data_string.pop();
+            data_string.pop();
+
+            data_string.pop();
+            data_string.push(' ');
+            data_string.push_str(&path);
+
+            data_string.push(' ');
+            data_string.push_str(&format!("{:02}%", f32::floor(self.params.data_progress.load(Ordering::Relaxed) * 100.0)));
+        }
+
+        return data_string;
     }
 }
 

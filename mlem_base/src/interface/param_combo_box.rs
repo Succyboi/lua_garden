@@ -10,6 +10,8 @@ pub struct ParamComboBox<'a, P: Param> {
     param: &'a P,
     setter: &'a ParamSetter<'a>,
 
+    fixed: bool,
+
     /// Will be set in the `ui()` function so we can request keyboard input focus on Alt+click.
     keyboard_focus_id: Option<egui::Id>,
 }
@@ -22,11 +24,18 @@ impl<'a, P: Param> ParamComboBox<'a, P> {
             param,
             setter,
 
+            fixed: true,
+
             keyboard_focus_id: None,
         }
     }
 
-    fn plain_value(&self) -> P::Plain {
+    pub fn fill(mut self, fill: bool) -> Self {
+        self.fixed = fill;
+        self
+    }
+
+    pub fn plain_value(&self) -> P::Plain {
         self.param.modulated_plain_value()
     }
 
@@ -48,7 +57,9 @@ impl<'a, P: Param> ParamComboBox<'a, P> {
 impl<T: Enum + PartialEq> Widget for ParamComboBox<'_, EnumParam<T>> {
     fn ui(mut self, ui: &mut Ui) -> Response {
         ui.horizontal(|ui| {
-            ui.set_width(PARAM_WIDTH);
+            if self.fixed {
+                ui.set_width(PARAM_WIDTH);
+            }
 
             // Allocate an automatic ID for keeping track of keyboard focus state
             // FIXME: There doesn't seem to be a way to generate IDs in the public API, not sure how
@@ -73,7 +84,10 @@ impl<T: Enum + PartialEq> Widget for ParamComboBox<'_, EnumParam<T>> {
                     }
                 }
             ).response;
-            utils::fill_seperator_available(ui);
+
+            if self.fixed {
+                utils::fill_seperator_available(ui);
+            }
 
             if value != original_value {
                 if let Some(value) = self.param.string_to_normalized_value(&value) {

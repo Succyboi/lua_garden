@@ -7,6 +7,7 @@ use std::{ fmt::Error, sync::atomic::Ordering };
 use mlem_base::console::ConsoleSender;
 use nih_plug_egui::egui::load;
 use crate::consts;
+use crate::read_mode::DataReadMode;
 use crate::{ MeterParams };
 use nih_plug::{ prelude::* };
 use mlem_base::runtime::utils::{ self, RMS, Timer };
@@ -24,9 +25,11 @@ pub struct Runtime {
 
     file_path: Option<String>,
     file_offset: u64,
+    file_len: u64,
     data: [u8; MAX_DATA_SIZE],
     data_len: usize,
     data_pos: usize,
+    bit_pos: usize,
 
     run_time: RMS,
 }
@@ -43,9 +46,11 @@ impl Runtime {
             
             file_path: None,
             file_offset: 0,
+            file_len: 0,
             data: [0; MAX_DATA_SIZE],
             data_len: 0,
             data_pos: 0,
+            bit_pos: 0,
 
             run_time: RMS::new(1.0),
         };
@@ -78,26 +83,27 @@ impl Runtime {
         self.last_playing = transport.playing;
 
 
-        let mut load_path = params.load_path.lock().unwrap();
+        let load_path = params.load_path.lock().unwrap();
         if let Some(path) = (*load_path).clone() {
-            self.file_path = Some(path.clone());
-            if let Err(err) = self.update_data_from_file() {
-                self.log(format!("Failed to load file at path \"{path}\": {err}"));
+            if self.file_path != Some(path.clone()) {
+                self.file_path = Some(path.clone());
+                self.file_offset = 0;
+                if let Err(err) = self.update_data_from_file() {
+                    self.log(format!("Failed to load file at path \"{path}\": {err}"));
+                }
             }
-            self.file_offset = 0;
         }
-        *load_path = None;
 
         let mut data_preview = params.data_preview.lock().unwrap();
         let len = usize::min(self.data_len - self.data_pos, data_preview.len());
         data_preview[0..len].clone_from_slice(&self.data[self.data_pos..(len + self.data_pos)]);
 
         for channel_samples in buffer.iter_samples() {          
-            let mut value = if params.mono.value() { self.next_data() } else { 0.0 };
+            let mut value = if params.mono.value() { self.next_value(params) } else { 0.0 };
 
             for sample in channel_samples {
                 if !params.mono.value() {
-                    value = self.next_data();
+                    value = self.next_value(params);
                 }
 
                 if params.mute.value() {
@@ -118,35 +124,75 @@ impl Runtime {
         params.buffer_size.store(self.buffer_size, Ordering::Relaxed);
         params.channels.store(self.channels, Ordering::Relaxed);
         params.run_ms.store(self.run_time.get(), Ordering::Relaxed);
+
+        if self.file_len > 0 {
+            params.data_progress.store((self.file_offset + self.data_pos as u64) as f32 / self.file_len as f32, Ordering::Relaxed);
+        }
     }
 
-    fn next_data(&mut self) -> f32 {
-        let raw = self.data[self.data_pos];
-        let value = raw as f32 / u8::MAX as f32 * 2.0 - 0.5;
+    fn next_value(&mut self, params: &MeterParams) -> f32 {
+        match params.read_mode.value() {
+            DataReadMode::Bit1 => {
+                let raw = self.next_bit();
+                return if raw { 1.0 } else { 0.0 };
+            },
+            DataReadMode::Bit8 => {
+                let raw = self.next_byte();
+                return raw as f32 / u8::MAX as f32 * 2.0 - 1.0;
+            },
+            DataReadMode::Bit16 => {
+                let raw = u16::from_ne_bytes([
+                    self.next_byte(), 
+                    self.next_byte()
+                    ]);
+                return raw as f32 / u16::MAX as f32 * 2.0;
+            }
+        }
+    }
+    
+    fn next_bit(&mut self) -> bool {
+        let byte = if self.bit_pos >= 8 {
+            self.bit_pos = 0;
+            self.next_byte()
+        } else {
+            self.curr_byte()
+        };
+
+        let mask = 1 << self.bit_pos;
+        self.bit_pos = self.bit_pos + 1;
+        return (mask & byte) > 0;
+    }
+
+    fn next_byte(&mut self) -> u8 {
+        let byte = self.curr_byte();
         self.data_pos = self.data_pos + 1;
 
         if self.data_pos >= self.data_len {
             let _ = self.update_data_from_file();
             self.data_pos = 0;
         }
-        
-        return value;
+
+        return byte;
+    }
+
+    fn curr_byte(&self) -> u8 {
+        return self.data[self.data_pos];
     }
 
     fn update_data_from_file(&mut self) -> std::io::Result<()> {
         if let Some(file_path) = &self.file_path {
             let file = File::open(file_path)?;
-            let file_len = file.metadata()?.len();
+            self.file_len = file.metadata()?.len();
 
-            if file_len == 0 {
+            if self.file_len == 0 {
                 return Err(std::io::Error::new(io::ErrorKind::Other, "File length is 0."));
             }
 
-            self.file_offset = (self.file_offset + self.data_len as u64) % file_len;
+            self.file_offset = (self.file_offset + self.data_len as u64) % self.file_len;
             self.data_len = file.read_at(&mut self.data, self.file_offset)?;
             self.data_pos = 0;
 
-            self.log(format!("File read {bytes} bytes at {percent}%", bytes = self.data_len, percent = f32::floor(self.file_offset as f32 / file.metadata()?.len() as f32 * 100.0)));
+            self.log(format!("File read {bytes} bytes at path \"{path}\" ({percent}%)", bytes = self.data_len, path = file_path, percent = f32::floor(self.file_offset as f32 / self.file_len as f32 * 100.0)));
         }
         
         Ok(())

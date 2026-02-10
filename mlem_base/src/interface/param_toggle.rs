@@ -11,6 +11,7 @@ pub struct ParamToggle<'a, P: Param> {
 
     true_str: &'a str,
     false_str: &'a str,
+    fixed: bool,
 
     /// Will be set in the `ui()` function so we can request keyboard input focus on Alt+click.
     keyboard_focus_id: Option<egui::Id>,
@@ -26,9 +27,15 @@ impl<'a, P: Param> ParamToggle<'a, P> {
 
             true_str,
             false_str,
+            fixed: true,
 
             keyboard_focus_id: None,
         }
+    }
+
+    pub fn fill(mut self, fill: bool) -> Self {
+        self.fixed = fill;
+        self
     }
 
     fn plain_value(&self) -> P::Plain {
@@ -66,7 +73,9 @@ impl<'a, P: Param> ParamToggle<'a, P> {
 impl Widget for ParamToggle<'_, BoolParam> {
     fn ui(mut self, ui: &mut Ui) -> Response {
         ui.horizontal(|ui| {
-            ui.set_width(PARAM_WIDTH);
+            if self.fixed {
+                ui.set_width(PARAM_WIDTH);
+            }
 
             // Allocate an automatic ID for keeping track of keyboard focus state
             // FIXME: There doesn't seem to be a way to generate IDs in the public API, not sure how
@@ -78,7 +87,10 @@ impl Widget for ParamToggle<'_, BoolParam> {
             let mut bool_value = original_value;
             let text = if bool_value { self.true_str } else { self.false_str };
             let response = ui.toggle_value(&mut bool_value, text);
-            utils::fill_seperator_available(ui); // TODO fix to max width based on content
+
+            if self.fixed {
+                utils::fill_seperator_available(ui); // TODO fix to max width based on content
+            }
             
             if original_value != bool_value {
                 self.begin_drag();

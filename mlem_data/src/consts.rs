@@ -21,7 +21,8 @@ pub const PLUGIN_METADATA: PluginMetadata = PluginMetadata::new(
     &[Vst3SubCategory::Fx, Vst3SubCategory::Tools], 
 
     384,
-    384
+    384,
+    mlem_egui_themes::MLEM_DARK
 );
 pub const DISCLAIMER: &str = include_str!("../disclaimer.txt");
 pub const DEFAULT_DATA: &[u8; 1061034] = include_bytes!("../default_data");

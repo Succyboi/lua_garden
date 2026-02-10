@@ -21,5 +21,6 @@ pub const PLUGIN_METADATA: PluginMetadata = PluginMetadata::new(
     &[Vst3SubCategory::Fx, Vst3SubCategory::Tools], 
 
     256,
-    146
+    146,
+    mlem_egui_themes::MLEM_LIGHT
 );

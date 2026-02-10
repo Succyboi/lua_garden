@@ -14,6 +14,7 @@ pub struct ParamDragValue<'a, P: Param> {
     param: &'a P,
     setter: &'a ParamSetter<'a>,
 
+    fixed: bool,
     draw_unit: bool,
 
     /// Will be set in the `ui()` function so we can request keyboard input focus on Alt+click.
@@ -28,6 +29,7 @@ impl<'a, P: Param> ParamDragValue<'a, P> {
             param,
             setter,
 
+            fixed: true,
             draw_unit: true,
 
             keyboard_focus_id: None,
@@ -37,6 +39,11 @@ impl<'a, P: Param> ParamDragValue<'a, P> {
     /// Don't draw the text slider's current value after the slider.
     pub fn without_unit(mut self) -> Self {
         self.draw_unit = false;
+        self
+    }
+
+    pub fn fill(mut self, fill: bool) -> Self {
+        self.fixed = fill;
         self
     }
 
@@ -78,7 +85,9 @@ impl<'a, P: Param> ParamDragValue<'a, P> {
 impl Widget for ParamDragValue<'_, FloatParam> {
     fn ui(mut self, ui: &mut Ui) -> Response {
         ui.horizontal(|ui| {
-            ui.set_width(PARAM_WIDTH);
+            if self.fixed {
+                ui.set_width(PARAM_WIDTH);
+            }
 
             // Allocate an automatic ID for keeping track of keyboard focus state
             // FIXME: There doesn't seem to be a way to generate IDs in the public API, not sure how
@@ -98,7 +107,10 @@ impl Widget for ParamDragValue<'_, FloatParam> {
                 .range(min..=max)
                 .max_decimals(MAX_DECIMALS)
             );
-            utils::fill_seperator_available(ui);
+            
+            if self.fixed {
+                utils::fill_seperator_available(ui);
+            }
 
             let unit = self.param.unit();
             if self.draw_unit && !unit.is_empty() {

@@ -1,8 +1,3 @@
-use crate::egui::Color32;
-
-const COLOR_PARSING_ERROR: &str = "Couldn't parse hex color.";
-
-/// The colors for a theme variant.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Theme {
     pub font_name: &'static str,
@@ -23,68 +18,97 @@ pub struct Theme {
     pub selection_opacity: f32,
     pub shadow_opacity: f32,
 
-    pub background: Color32,
+    pub background: &'static str,
 
-    pub f_high: Color32,
-    pub f_med: Color32,
-    pub f_low: Color32,
-    pub f_inv: Color32,
+    pub f_high: &'static str,
+    pub f_med: &'static str,
+    pub f_low: &'static str,
+    pub f_inv: &'static str,
 
-    pub b_high: Color32,
-    pub b_med: Color32,
-    pub b_low: Color32,
-    pub b_inv: Color32
+    pub b_high: &'static str,
+    pub b_med: &'static str,
+    pub b_low: &'static str,
+    pub b_inv: &'static str
 }
 
-// ===
-// GARDEN DEFAULT THEMES
+const MLEM_FONT_NAME: &str = "Inter Regular";
+const MLEM_FONT: &[u8] = include_bytes!("../static/fonts/inter_regular_v4-1.otf");
+const MLEM_FONT_HEADING_SIZE: f32 = 18.0;
+const MLEM_FONT_SMALL_SIZE: f32 = 8.0;
+const MLEM_FONT_SIZE: f32 = 12.0;
 
-const GARDEN_FONT_NAME: &str = "Inter Regular";
-const GARDEN_FONT: &[u8] = include_bytes!("../static/fonts/inter_regular_v4-1.otf");
-const GARDEN_FONT_HEADING_SIZE: f32 = 18.0;
-const GARDEN_FONT_SMALL_SIZE: f32 = 8.0;
-const GARDEN_FONT_SIZE: f32 = 12.0;
+const MLEM_MONO_FONT_NAME: &str = "Cozette";
+const MLEM_MONO_FONT: &[u8] = include_bytes!("../static/fonts/cozette_vector_v1-25-2.otf");
+const MLEM_MONO_FONT_SIZE: f32 = 13.0;
 
-const GARDEN_MONO_FONT_NAME: &str = "Cozette";
-const GARDEN_MONO_FONT: &[u8] = include_bytes!("../static/fonts/cozette_vector_v1-25-2.otf");
-const GARDEN_MONO_FONT_SIZE: f32 = 13.0;
+const MLEM_ICON_FONT_NAME: &str = "Phosphor";
+const MLEM_ICON_FONT: &[u8] = include_bytes!("../static/fonts/phosphor_v2-1.ttf");
 
-const GARDEN_ICON_FONT_NAME: &str = "Phosphor";
-const GARDEN_ICON_FONT: &[u8] = include_bytes!("../static/fonts/phosphor_v2-1.ttf");
-
-pub fn garden_day() -> Theme {
-    Theme {
-        font_name: &GARDEN_FONT_NAME,
-        font_data: Some(&GARDEN_FONT),
-        mono_font_name: &GARDEN_MONO_FONT_NAME,
-        mono_font_data: Some(&GARDEN_MONO_FONT),
-        icon_font_name: &GARDEN_ICON_FONT_NAME,
-        icon_font_data: Some(&GARDEN_ICON_FONT),
-        
-        font_heading_size: GARDEN_FONT_HEADING_SIZE,
-        font_body_size: GARDEN_FONT_SIZE,
-        font_monospace_size: GARDEN_MONO_FONT_SIZE,
-        font_button_size: GARDEN_FONT_SIZE,
-        font_small_size: GARDEN_FONT_SMALL_SIZE,
-        font_fallback_to_default: true,
-
-        darkmode: true,
-        selection_opacity: 1.0,
-        shadow_opacity: 1.0,
+pub const MLEM_LIGHT : Theme = Theme {
+    font_name: &MLEM_FONT_NAME,
+    font_data: Some(&MLEM_FONT),
+    mono_font_name: &MLEM_MONO_FONT_NAME,
+    mono_font_data: Some(&MLEM_MONO_FONT),
+    icon_font_name: &MLEM_ICON_FONT_NAME,
+    icon_font_data: Some(&MLEM_ICON_FONT),
     
-        background: Color32::from_hex("#F8F7F7").expect(COLOR_PARSING_ERROR),
+    font_heading_size: MLEM_FONT_HEADING_SIZE,
+    font_body_size: MLEM_FONT_SIZE,
+    font_monospace_size: MLEM_MONO_FONT_SIZE,
+    font_button_size: MLEM_FONT_SIZE,
+    font_small_size: MLEM_FONT_SMALL_SIZE,
+    font_fallback_to_default: true,
 
-        f_high: Color32::from_hex("#2b2b26").expect(COLOR_PARSING_ERROR),
-        f_med: Color32::from_hex("#8E8E93").expect(COLOR_PARSING_ERROR),
-        f_low: Color32::from_hex("#cfcfcf").expect(COLOR_PARSING_ERROR),
-        f_inv: Color32::from_hex("#5f5f5f").expect(COLOR_PARSING_ERROR),
+    darkmode: true,
+    selection_opacity: 1.0,
+    shadow_opacity: 1.0,
+
+    background: "#F8F7F7",
+
+    f_high: "#2b2b26",
+    f_med: "#8E8E93",
+    f_low: "#cfcfcf",
+    f_inv: "#5f5f5f",
+
+    b_high: "#5f5f5f",
+    b_med: "#cfcfcf",
+    b_low: "#e4e4e4",
+    b_inv: "#8E8E93"
+};
+
+pub const MLEM_DARK: Theme = Theme {
+    font_name: &MLEM_FONT_NAME,
+    font_data: Some(&MLEM_FONT),
+    mono_font_name: &MLEM_MONO_FONT_NAME,
+    mono_font_data: Some(&MLEM_MONO_FONT),
+    icon_font_name: &MLEM_ICON_FONT_NAME,
+    icon_font_data: Some(&MLEM_ICON_FONT),
     
-        b_high: Color32::from_hex("#5f5f5f").expect(COLOR_PARSING_ERROR),
-        b_med: Color32::from_hex("#cfcfcf").expect(COLOR_PARSING_ERROR),
-        b_low: Color32::from_hex("#e4e4e4").expect(COLOR_PARSING_ERROR),
-        b_inv: Color32::from_hex("#8E8E93").expect(COLOR_PARSING_ERROR)
-    }
-}
+    font_heading_size: MLEM_FONT_HEADING_SIZE,
+    font_body_size: MLEM_FONT_SIZE,
+    font_monospace_size: MLEM_MONO_FONT_SIZE,
+    font_button_size: MLEM_FONT_SIZE,
+    font_small_size: MLEM_FONT_SMALL_SIZE,
+    font_fallback_to_default: true,
+
+    darkmode: true,
+    selection_opacity: 1.0,
+    shadow_opacity: 1.0,
+
+    background: "#080707",
+
+    f_high: "#D9D9D3",
+    f_med: "#6E6E6E",
+    f_low: "#303030",
+    f_inv: "#A1A1A1",
+
+    b_high: "#A1A1A1",
+    b_med: "#303030",
+    b_low: "#1C1C1C",
+    b_inv: "#6E6E6E"
+};
+
+/* OLD THEMES
 
 pub fn garden_night() -> Theme {
     Theme {
@@ -188,5 +212,4 @@ pub fn garden_playdate() -> Theme {
     }
 }
 
-// GARDEN DEFAULT THEMES
-// ===
+*/

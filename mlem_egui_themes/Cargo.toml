@@ -6,3 +6,4 @@ edition = "2021"
 
 [dependencies]
 nih_plug_egui = { git = "https://github.com/robbert-vdh/nih-plug" }
+egui = { version = "0.31.1", features = ["color-hex"] }
