@@ -8,7 +8,7 @@ use mlem_base::{console::ConsoleSender, interface::{self, param_combo_box, param
 use runtime::{ Runtime };
 use mlem_base::{ interface::{ Interface }, PluginImplementation };
 use nih_plug::prelude::*;
-use std::{ffi::OsStr, ops::Deref, path::{Path, PathBuf}, str::FromStr, sync::{ Arc, Mutex, atomic::{AtomicBool, AtomicUsize, Ordering} }};
+use std::{ffi::OsStr, io::Error, ops::Deref, path::{Path, PathBuf}, str::FromStr, sync::{ Arc, Mutex, atomic::{AtomicBool, AtomicUsize, Ordering} }};
 use nih_plug_egui::{EguiState, egui::{Align, Context, Label, Layout, RichText, TextFormat, Ui, Vec2, text::LayoutJob}};
 use consts::PLUGIN_METADATA;
 
@@ -188,22 +188,31 @@ impl MeterImplementation {
         if select_folder_dialog.show(ctx).selected() {
             if let Some(path) = select_folder_dialog.path() {
                 let mut paths = self.params.paths.lock().unwrap();
-                paths.clear();
-
-                let Ok(path) = String::from_str(&path.to_string_lossy());
-                if let Ok(directory) = std::fs::read_dir(path) {
-                    for file in directory {
-                        if let Ok(file) = file {
-                            let Ok(path) = String::from_str(&file.path().to_string_lossy());
-                            paths.push(path);
-                        } 
-                    }
+                
+                if let Ok(path_lossy) = path.to_string_lossy() {
+                    Self::update_filepaths_from_folder(path_lossy, &mut paths);
                 }
 
                 self.params.path_refresh.store(true, Ordering::Relaxed);
                 self.params.path_current.store(paths.len(), Ordering::Relaxed);
             }
         }
+    }
+
+    fn update_filepaths_from_folder(path: String, paths: &mut Vec<String>) -> Result<(), Error> {
+        paths.clear();
+
+        let Ok(path) = String::from_str(&path);
+        if let Ok(directory) = std::fs::read_dir(path) {
+            for file in directory {
+                if let Ok(file) = file {
+                    let Ok(path) = String::from_str(&file.path().to_string_lossy());
+                    paths.push(path);
+                } 
+            }
+        }
+
+        return Ok(());
     }
 
     fn build_data_string(&self, length: usize) -> String {
