@@ -188,13 +188,11 @@ impl MeterImplementation {
         if select_folder_dialog.show(ctx).selected() {
             if let Some(path) = select_folder_dialog.path() {
                 let mut paths = self.params.paths.lock().unwrap();
-                
-                if let Ok(path_lossy) = path.to_string_lossy() {
-                    Self::update_filepaths_from_folder(path_lossy, &mut paths);
+                let Ok(path_lossy) = String::from_str(&path.to_string_lossy());
+                if let Ok(_) = Self::update_filepaths_from_folder(path_lossy, &mut paths) {
+                    self.params.path_refresh.store(true, Ordering::Relaxed);
+                    self.params.path_current.store(paths.len(), Ordering::Relaxed);
                 }
-
-                self.params.path_refresh.store(true, Ordering::Relaxed);
-                self.params.path_current.store(paths.len(), Ordering::Relaxed);
             }
         }
     }

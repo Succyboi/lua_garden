@@ -211,12 +211,12 @@ impl Runtime {
 
     fn get_file(&mut self, params: &MeterParams, index: &mut usize) -> std::io::Result<File> {
         let paths = params.paths.lock().unwrap();
-        *index = *index % paths.len();
-
+                
         if paths.len() <= 0 {
             return Err(std::io::Error::new(io::ErrorKind::Other, "No paths available."));
         }
-
+        
+        *index = *index % paths.len();
         let file_path = &paths[*index];
         let file = File::open(file_path)?;
         self.file_len = file.metadata()?.len();

@@ -117,7 +117,7 @@ impl PluginImplementation<MeterParams> for MeterImplementation {
             });
 
             parameter_label(ui, "Reset On Play", "Resets metering when starting play.", |ui| {
-                ui.add(param_toggle::ParamToggle::for_param(&self.params.reset_on_play, setter));
+                ui.add(param_toggle::ParamToggle::for_param(&self.params.reset_on_play, setter, "Yes", "No"));
             });
         });
     }

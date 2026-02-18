@@ -22,5 +22,5 @@ pub const PLUGIN_METADATA: PluginMetadata = PluginMetadata::new(
 
     256,
     146,
-    mlem_egui_themes::MLEM_LIGHT
+    mlem_egui_themes::MLEM_DARK
 );

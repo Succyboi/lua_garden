@@ -9,7 +9,7 @@ Published builds contain CLAP, VST3 and Standalone versions.
 ## Includes
 
 - [mlem_base](mlem_base) 0.1.2 - A plugin base.
-- [mlem_egui_themes](mlem_base) 0.1.2 - An egui theming library.
+- [mlem_egui_themes](mlem_egui_themes) 0.1.2 - An egui theming library.
 - [mlem_meter](mlem_meter) 0.1.2 - An audio meter.
     > Measures input according to the [LUFS](https://en.wikipedia.org/wiki/LUFS) standard.
     > 
@@ -18,8 +18,6 @@ Published builds contain CLAP, VST3 and Standalone versions.
     > Takes files as input, outputs audio.
     > 
     > ![mlem_data](mlem_data/preview.png)
-    - TODO folder loading
-    - TODO file and playback % display
 - [lua_garden_plug](lua_garden_plug) - Total WIP.
 - mlem_dynrange - TBM - A manual linear dynamic range remapper. 
 
