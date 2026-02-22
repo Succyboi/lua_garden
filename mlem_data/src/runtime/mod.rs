@@ -126,7 +126,7 @@ impl Runtime {
         match params.read_mode.value() {
             DataReadMode::Bit1 => {
                 let raw = self.next_bit(params);
-                return if raw { 1.0 } else { 0.0 };
+                return if raw { 1.0 } else { -1.0 };
             },
 
             DataReadMode::Bit4 => {
