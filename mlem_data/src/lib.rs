@@ -220,6 +220,7 @@ impl MeterImplementation {
             data_string.push_str(format!("{:02X?}", data_preview[i]).as_str());
         }
 
+
         let paths = self.params.paths.lock().unwrap();
         let path_current = self.params.path_current.load(Ordering::Relaxed);
         if  path_current < paths.len() {

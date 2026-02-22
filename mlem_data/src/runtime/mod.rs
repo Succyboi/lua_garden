@@ -129,20 +129,47 @@ impl Runtime {
                 let raw = self.next_bit(params);
                 return if raw { 1.0 } else { 0.0 };
             },
+
             DataReadMode::Bit4 => {
                 let raw = self.next_nibble(params);
                 return raw as u8 as f32 / U4::MAX as u8 as f32 * 2.0 - 1.0;
             },
+
             DataReadMode::Bit8 => {
                 let raw = self.next_byte(params);
                 return raw as f32 / u8::MAX as f32 * 2.0 - 1.0;
             },
+
             DataReadMode::Bit16 => {
                 let raw = u16::from_ne_bytes([
                     self.next_byte(params),
                     self.next_byte(params)
                     ]);
                 return raw as f32 / u16::MAX as f32 * 2.0;
+            },
+
+            DataReadMode::Bit32 => {
+                let raw = u32::from_ne_bytes([
+                    self.next_byte(params),
+                    self.next_byte(params),
+                    self.next_byte(params),
+                    self.next_byte(params)
+                    ]);
+                return raw as f32 / u32::MAX as f32 * 2.0;
+            },
+
+            DataReadMode::Bit64 => {
+                let raw = u64::from_ne_bytes([
+                    self.next_byte(params),
+                    self.next_byte(params),
+                    self.next_byte(params),
+                    self.next_byte(params),
+                    self.next_byte(params),
+                    self.next_byte(params),
+                    self.next_byte(params),
+                    self.next_byte(params)
+                    ]);
+                return raw as f32 / u64::MAX as f32 * 2.0;
             }
         }
     }

@@ -5,7 +5,7 @@ use nih_plug_egui::egui::{self, Align, ColorImage, Context, DragValue, Grid, Lay
 use crate::interface::param_drag_value::ParamDragValue;
 
 pub const HOVER_HASH: &str = "HOVER";
-pub const TOOLTIP_HOVER_WIDTH: f32 = 256.0;
+pub const TOOLTIP_HOVER_WIDTH: f32 = 128.0;
 pub const GRID_SPACING: f32 = 4.0;
 
 pub fn help_label(ui: &mut Ui, text: impl Into<RichText>) {    
@@ -30,9 +30,12 @@ pub fn toggle_value(ui: &mut Ui, value: &mut bool, true_text: impl Into<WidgetTe
 }
 
 pub fn parameter_grid(ui: &mut Ui, hash: impl std::hash::Hash, add_contents: impl FnOnce(&mut Ui)) {
+    let available_width = ui.available_width();
+
     Grid::new(hash)
         .num_columns(2)
         .spacing([GRID_SPACING, GRID_SPACING])
+        .min_col_width(available_width / 2.0)
         .show(ui, add_contents);
 }
 

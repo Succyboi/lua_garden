@@ -4,7 +4,7 @@ authors = [
     "Puk Bruinsma / DJ ZITwerK <puk@mlemrecords.com>"
     ]
 homepage = "https://mlemrecords.com"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 description = "The base for Mlem audio plugins."
 license-file = "LICENSE"

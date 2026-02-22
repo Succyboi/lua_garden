@@ -13,4 +13,10 @@ pub enum DataReadMode {
     
     #[id = "bit16"]
     Bit16,
+
+    #[id = "bit32"]
+    Bit32,
+
+    #[id = "bit64"]
+    Bit64,
 }
