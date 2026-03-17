@@ -1,8 +1,7 @@
 use core::fmt;
 use std::fmt::format;
 use std::fs::File;
-use std::io::{self, Read};
-use std::os::unix::fs::FileExt;
+use std::io::{self, Read, Seek};
 use std::{ fmt::Error, sync::atomic::Ordering };
 use mlem_base::console::ConsoleSender;
 use nih_plug_egui::egui::load;
@@ -127,7 +126,7 @@ impl Runtime {
         match params.read_mode.value() {
             DataReadMode::Bit1 => {
                 let raw = self.next_bit(params);
-                return if raw { 1.0 } else { 0.0 };
+                return if raw { 1.0 } else { -1.0 };
             },
 
             DataReadMode::Bit4 => {
@@ -228,7 +227,8 @@ impl Runtime {
             file = self.get_file(params, &mut path_current)?;
         }
         
-        self.data_len = file.read_at(&mut self.data, self.file_offset)?;
+        file.seek(io::SeekFrom::Start(self.file_offset))?;
+        self.data_len = file.read(&mut self.data)?;
         self.data_pos = 0;
         params.path_current.store(path_current, Ordering::Release);
 
