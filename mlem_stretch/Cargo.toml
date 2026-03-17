@@ -1,12 +1,12 @@
 [package]
-name = "mlem_meter"
+name = "mlem_stretch"
 authors = [
     "Puk Bruinsma / DJ ZITwerK <puk@mlemrecords.com>"
     ]
 homepage = "https://mlemrecords.com"
-version = "0.1.2"
+version = "0.1.0"
 edition = "2021"
-description = "An audio meter."
+description = "A time stretcher."
 license-file = "LICENSE"
 
 [lib]
@@ -20,4 +20,4 @@ atomic_float = "1.1.0"
 mlem_egui_themes = { path = "../mlem_egui_themes" }
 mlem_base = { path = "../mlem_base" }
 
-ebur128 = "0.1.10"
+signalsmith-stretch = "0.1.3"
