@@ -3,6 +3,7 @@ use std::fmt::format;
 use std::sync::mpsc::channel;
 use std::{ fmt::Error, sync::atomic::Ordering };
 use mlem_base::console::ConsoleSender;
+use mlem_base::runtime::buffers::RecBuffer;
 use crate::consts::PLUGIN_METADATA;
 use crate::{ StretchParams };
 use nih_plug::{ prelude::* };
@@ -22,7 +23,7 @@ pub struct Runtime {
 
     last_active: bool,
     stretch: Vec<Stretch>,
-    stretch_buffers: Vec<Vec<f32>>,
+    rec_buffers: Vec<RecBuffer>,
 
     run_time: RMS,
     clip: bool
@@ -38,8 +39,8 @@ impl Runtime {
             channels: 0,
             
             last_active: false,
+            rec_buffers: Vec::new(),
             stretch: Vec::new(),
-            stretch_buffers: Vec::new(),
 
             run_time: RMS::new(1.0),
             clip: PLUGIN_METADATA.build_is_debug
@@ -60,11 +61,7 @@ impl Runtime {
     pub fn reset(&mut self) {
         let execute_timer = Timer::new();
 
-        for s in self.stretch.iter_mut() {
-            s.reset();
-        }
-
-        for b in self.stretch_buffers.iter_mut() {
+        for b in self.rec_buffers.iter_mut() {
             b.clear();
         }
 
@@ -75,12 +72,14 @@ impl Runtime {
         self.buffer_size = buffer.samples();
         self.channels = buffer.channels();
         let execute_timer = Timer::new();
-        let active = params.speed.value() < 1.0; // TODO switch for param
+        let active = params.stretch.value();
         let reset = !active && self.last_active;
+        self.last_active = active;
 
         if reset {
             self.reset();
         }
+
         if active {
             self.run_stretch_buffers(buffer, params);
 
@@ -98,25 +97,23 @@ impl Runtime {
     }
 
     fn run_stretch_buffers(&mut self, buffer: &mut Buffer, params: &StretchParams) {
-        let max_buffer_len = (self.sample_rate * MAX_BUFFER_SECONDS) as usize;
-
         for mut block_channel in buffer.iter_blocks(buffer.samples()) {     
             for channel in 0..block_channel.1.channels() {
                 match block_channel.1.get_mut(channel) {
                     Some(mut samples) => {
                         if channel >= self.stretch.len() {
                             self.stretch.push(Stretch::preset_default(1, self.sample_rate as u32));
-                            self.stretch_buffers.push(Vec::new());
+                            self.rec_buffers.push(RecBuffer::new().with_sample_rate(self.sample_rate as usize).with_max_length(MAX_BUFFER_SECONDS));
                         }
 
-                        if self.stretch_buffers[channel].len() > max_buffer_len {
-                            continue;
-                        }
+                        self.rec_buffers[channel].push_mult(&mut samples);
 
-                        let output_len = f32::round(samples.len() as f32 / f32::max(params.speed.value(), MIN_SPEED)) as usize;
-                        let mut output = vec![0.0f32; output_len];
-                        self.stretch[channel].process(&mut samples, &mut output);
-                        self.stretch_buffers[channel].append(&mut output);
+                        let speed = f32::clamp(params.speed.value(), MIN_SPEED, 1.0);
+                        let input_len = f32::ceil(samples.len() as f32 * speed) as usize;
+                        let mut input = vec![0.0; input_len];
+
+                        self.rec_buffers[channel].pop_mult(&mut input);
+                        self.stretch[channel].exact(&mut input, &mut samples);
                     },
                     None => {
                         self.log(format!("Could not get samples from block."));

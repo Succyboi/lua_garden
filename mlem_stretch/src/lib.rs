@@ -20,6 +20,7 @@ pub struct Stretch {
 pub struct StretchParams {
     #[persist = "editor-state"] editor_state: Arc<EguiState>,
     #[id = "speed"]             speed: FloatParam,
+    #[id = "stretch"]           stretch: BoolParam,
     
     sample_rate: AtomicF32,
     buffer_size: AtomicUsize,
@@ -49,6 +50,7 @@ impl Default for StretchParams {
         Self {
             editor_state: EguiState::from_size(PLUGIN_METADATA.window_width, PLUGIN_METADATA.window_height),
             speed: FloatParam::new("Speed", 1.0, FloatRange::Linear { min: 0.0, max: 1.0 }),
+            stretch: BoolParam::new("Stretch", false),
 
             sample_rate: AtomicF32::new(0.0),
             buffer_size: AtomicUsize::new(0),
@@ -85,7 +87,10 @@ impl PluginImplementation<StretchParams> for StretchImplementation {
     fn interface_build(&self, _ctx: &Context) { }
 
     fn interface_update_center(&self, ui: &mut Ui, _ctx: &Context, setter: &ParamSetter) {
-        ui.add(param_drag_value::ParamDragValue::for_param(&self.params.speed, setter));
+        ui.horizontal(|ui| {
+            ui.add(param_toggle::ParamToggle::for_param(&self.params.stretch, setter, "Stretch", "Stretch"));
+            ui.add(param_drag_value::ParamDragValue::for_param(&self.params.speed, setter));
+        });
     }
 
     fn interface_update_bar(&self, ui: &mut Ui, _ctx: &Context, _setter: &ParamSetter) {
