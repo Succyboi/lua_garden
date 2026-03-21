@@ -4,12 +4,14 @@ use std::sync::mpsc::channel;
 use std::{ fmt::Error, sync::atomic::Ordering };
 use mlem_base::console::ConsoleSender;
 use mlem_base::runtime::buffers::RecBuffer;
+use mlem_base::runtime::rng::{Rng, RngSplitMix64};
+use nih_plug_egui::egui::output;
 use crate::consts::PLUGIN_METADATA;
 use crate::{ StretchParams };
 use nih_plug::{ prelude::* };
 use utils::{ RMS, Timer };
 use mlem_base::runtime::utils::{ self };
-use signalsmith_stretch::Stretch;
+use mlem_base::runtime::stretch::Stretch;
 
 const MIN_SPEED: f32 = 0.001;
 const MAX_BUFFER_SECONDS: f32 = 60.0;
@@ -61,6 +63,10 @@ impl Runtime {
     pub fn reset(&mut self) {
         let execute_timer = Timer::new();
 
+        for s in self.stretch.iter_mut() {
+            s.reset();
+        }
+
         for b in self.rec_buffers.iter_mut() {
             b.clear();
         }
@@ -102,7 +108,7 @@ impl Runtime {
                 match block_channel.1.get_mut(channel) {
                     Some(mut samples) => {
                         if channel >= self.stretch.len() {
-                            self.stretch.push(Stretch::preset_default(1, self.sample_rate as u32));
+                            self.stretch.push(Stretch::new().with_sample_rate(self.sample_rate as usize).with_window_size(0.0));
                             self.rec_buffers.push(RecBuffer::new().with_sample_rate(self.sample_rate as usize).with_max_length(MAX_BUFFER_SECONDS));
                         }
 
@@ -113,7 +119,7 @@ impl Runtime {
                         let mut input = vec![0.0; input_len];
 
                         self.rec_buffers[channel].pop_mult(&mut input);
-                        self.stretch[channel].exact(&mut input, &mut samples);
+                        self.stretch[channel].process(&mut input, &mut samples);
                     },
                     None => {
                         self.log(format!("Could not get samples from block."));

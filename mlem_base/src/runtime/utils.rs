@@ -1,7 +1,20 @@
-use std::time::Instant;
+use std::{time::Instant, usize};
 
 pub fn clip(input: f32) -> f32 {
     return f32::clamp(input, -1.0, 1.0)
+}
+
+pub fn next_zero_crossing(input: impl AsRef<[f32]>, from: usize) -> usize {
+    let input = input.as_ref();
+    let from_pos = f32::is_sign_positive(input[from]);
+
+    for i in from..input.len() {
+        if from_pos == f32::is_sign_positive(input[i]) { continue; }
+    
+        return i;
+    }
+
+    return from;
 }
 
 pub struct Timer {
