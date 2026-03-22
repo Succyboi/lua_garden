@@ -1,4 +1,6 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, ops::Index, process::Output};
+
+use nih_plug::buffer;
 
 pub struct RecBuffer {
     sample_rate: usize,
@@ -41,6 +43,10 @@ impl RecBuffer {
         self.refit();
     }
 
+    pub fn buffer(&self) -> &VecDeque<f32> {
+        return &self.buffer;
+    }
+
     pub fn max_length(&self) -> f32 {
         return self.max_length;
     }
@@ -59,7 +65,7 @@ impl RecBuffer {
         self.buffer.push_back(input);
     }
 
-    pub fn push_mult(&mut self, input: impl AsRef<[f32]>) {
+    pub fn push_mult(&mut self, input: &impl AsRef<[f32]>) {
         if self.full() { return; }
 
         let input = input.as_ref();
@@ -94,5 +100,15 @@ impl RecBuffer {
 
     fn full(&self) -> bool {
         return self.buffer.len() >= self.max_len();
+    }
+}
+
+impl Index<usize> for RecBuffer {
+    type Output = f32;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        if self.buffer.len() <= 0 { return &0.0; }
+
+        return &self.buffer[index % self.buffer.len()];
     }
 }

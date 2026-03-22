@@ -1,17 +1,57 @@
-use std::{time::Instant, usize};
+use std::{ops::Index, time::Instant, usize};
+
+use nih_plug_egui::egui::output;
 
 pub fn clip(input: f32) -> f32 {
     return f32::clamp(input, -1.0, 1.0)
 }
 
-pub fn next_zero_crossing(input: impl AsRef<[f32]>, from: usize) -> usize {
-    let input = input.as_ref();
-    let from_pos = f32::is_sign_positive(input[from]);
+pub fn nearest_zero_crossing(input: &impl Index<usize, Output = f32>, len: usize, from: usize, max_dist: usize) -> usize {
+    let previous = previous_zero_crossing(input, len, from, max_dist);
+    let next = next_zero_crossing(input, len, from, max_dist);
 
-    for i in from..input.len() {
-        if from_pos == f32::is_sign_positive(input[i]) { continue; }
-    
-        return i;
+    if previous == from {
+        return next;
+    }
+
+    if next == from {
+        return previous;
+    }
+
+    if usize::abs_diff(previous, from) < usize::abs_diff(next, from) {
+        return previous;
+    }
+
+    return next;
+}
+
+pub fn next_zero_crossing(input: &impl Index<usize, Output = f32>, len: usize, from: usize, max_dist: usize) -> usize {
+    let from_pos = f32::is_sign_positive(input[from]);
+    let mut i = from + 1;
+    let len = usize::min(len, from + max_dist);
+
+    while i < len {
+        if from_pos != f32::is_sign_positive(input[i]) {
+            return i;
+        }
+
+        i += 1;
+    }
+
+    return from;
+}
+
+pub fn previous_zero_crossing(input: &impl Index<usize, Output = f32>, len: usize, from: usize, max_dist: usize) -> usize {
+    let from_pos = f32::is_sign_positive(input[from]);
+    let mut i = from + 1;
+    let len = usize::min(len, from + max_dist);
+
+    while i < len {
+        if from_pos != f32::is_sign_positive(input[len - i]) {
+            return i;
+        }
+
+        i += 1;
     }
 
     return from;

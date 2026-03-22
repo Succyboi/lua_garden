@@ -1,15 +1,24 @@
-use std::ops::Range;
+use std::{ops::Range, time::{self, SystemTime, UNIX_EPOCH}};
 
-pub trait Rng {
-    fn from_u64(seed: u64) -> impl Rng;
+pub trait Rng<T> {
+    fn new() -> T;
+    fn from_u64(seed: u64) -> T;
     fn next_u32(&mut self) -> u32;
-
+    
     fn next_f32(&mut self) -> f32 {
         return self.next_u32() as f32 / u32::MAX as f32;
     }
 
     fn range_f32(&mut self, range: Range<f32>) -> f32 {
         return range.start + (range.end - range.start) * self.next_f32();
+    }
+
+    fn now() -> u64 {
+        let time = SystemTime::now();
+        let since = time
+            .duration_since(UNIX_EPOCH)
+            .expect("Time went backwards");
+        return since.as_secs();
     }
 }
 
@@ -36,7 +45,18 @@ pub struct RngSplitMix64 {
 
 const PHI: u64 = 0x9e3779b97f4a7c15;
 
-impl Rng for RngSplitMix64 {
+#[allow(refining_impl_trait)]
+impl Rng<RngSplitMix64> for RngSplitMix64 {
+    fn new() -> RngSplitMix64 {
+        return Self::from_u64(Self::now());
+    }
+
+    fn from_u64(seed: u64) -> RngSplitMix64 {
+        return Self {
+            x: seed
+        }
+    }
+    
     fn next_u32(&mut self) -> u32 {
         self.x = self.x.wrapping_add(PHI);
         let mut z = self.x;
@@ -47,11 +67,5 @@ impl Rng for RngSplitMix64 {
         z = (z ^ (z >> 33)).wrapping_mul(0x62A9D9ED799705F5);
         z = (z ^ (z >> 28)).wrapping_mul(0xCB24D0A5C88C35B3);
         return (z >> 32) as u32;
-    }
-
-    fn from_u64(seed: u64) -> impl Rng {
-        return Self {
-            x: seed
-        }
     }
 }

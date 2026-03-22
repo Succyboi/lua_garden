@@ -19,8 +19,11 @@ pub struct Stretch {
 #[derive(Params)]
 pub struct StretchParams {
     #[persist = "editor-state"] editor_state: Arc<EguiState>,
-    #[id = "speed"]             speed: FloatParam,
     #[id = "stretch"]           stretch: BoolParam,
+    #[id = "speed"]             speed: FloatParam,
+    #[id = "speed_variance"]    variance: FloatParam,
+    #[id = "window"]            window: FloatParam,
+    #[id = "pitch"]             pitch: IntParam,
     
     sample_rate: AtomicF32,
     buffer_size: AtomicUsize,
@@ -49,8 +52,11 @@ impl Default for StretchParams {
     fn default() -> Self {
         Self {
             editor_state: EguiState::from_size(PLUGIN_METADATA.window_width, PLUGIN_METADATA.window_height),
-            speed: FloatParam::new("Speed", 1.0, FloatRange::Linear { min: 0.0, max: 1.0 }),
             stretch: BoolParam::new("Stretch", false),
+            speed: FloatParam::new("Speed", 1.0, FloatRange::Linear { min: 0.0, max: 1.0 }),
+            variance: FloatParam::new("Speed Variance", 0.0, FloatRange::Linear { min: 0.0, max: 1.0 }),
+            window: FloatParam::new("Window Size", 1.0, FloatRange::Linear { min: 0.0, max: 0.2 }),
+            pitch: IntParam::new("Pitch", 0, IntRange::Linear { min: -12, max: 12 }),
 
             sample_rate: AtomicF32::new(0.0),
             buffer_size: AtomicUsize::new(0),
@@ -90,6 +96,15 @@ impl PluginImplementation<StretchParams> for StretchImplementation {
         ui.horizontal(|ui| {
             ui.add(param_toggle::ParamToggle::for_param(&self.params.stretch, setter, "Stretch", "Stretch"));
             ui.add(param_drag_value::ParamDragValue::for_param(&self.params.speed, setter));
+        });
+        
+        ui.horizontal(|ui| {
+            ui.add(param_drag_value::ParamDragValue::for_param(&self.params.variance, setter));
+            ui.add(param_drag_value::ParamDragValue::for_param(&self.params.window, setter));
+        });
+
+        ui.horizontal(|ui| {
+            ui.add(param_drag_value::ParamDragValue::for_param(&self.params.pitch, setter));
         });
     }
 

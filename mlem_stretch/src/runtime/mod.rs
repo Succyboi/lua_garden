@@ -1,11 +1,7 @@
-use core::fmt;
-use std::fmt::format;
-use std::sync::mpsc::channel;
-use std::{ fmt::Error, sync::atomic::Ordering };
+use std::sync::atomic::Ordering;
+
 use mlem_base::console::ConsoleSender;
-use mlem_base::runtime::buffers::RecBuffer;
-use mlem_base::runtime::rng::{Rng, RngSplitMix64};
-use nih_plug_egui::egui::output;
+use mlem_base::runtime::rng::{self, Rng, RngSplitMix64};
 use crate::consts::PLUGIN_METADATA;
 use crate::{ StretchParams };
 use nih_plug::{ prelude::* };
@@ -23,9 +19,10 @@ pub struct Runtime {
     buffer_size: usize,
     channels: usize,
 
+    rng: RngSplitMix64,
     last_active: bool,
     stretch: Vec<Stretch>,
-    rec_buffers: Vec<RecBuffer>,
+    variance: Vec<f32>, //TODO Implement variance
 
     run_time: RMS,
     clip: bool
@@ -40,9 +37,10 @@ impl Runtime {
             buffer_size: 0,
             channels: 0,
             
+            rng: RngSplitMix64::new(),
             last_active: false,
-            rec_buffers: Vec::new(),
             stretch: Vec::new(),
+            variance: Vec::new(),
 
             run_time: RMS::new(1.0),
             clip: PLUGIN_METADATA.build_is_debug
@@ -67,9 +65,7 @@ impl Runtime {
             s.reset();
         }
 
-        for b in self.rec_buffers.iter_mut() {
-            b.clear();
-        }
+        self.variance.clear();
 
         self.log(format!("Reset in {:.2}ms.", execute_timer.elapsed_ms()));
     }
@@ -108,18 +104,18 @@ impl Runtime {
                 match block_channel.1.get_mut(channel) {
                     Some(mut samples) => {
                         if channel >= self.stretch.len() {
-                            self.stretch.push(Stretch::new().with_sample_rate(self.sample_rate as usize).with_window_size(0.0));
-                            self.rec_buffers.push(RecBuffer::new().with_sample_rate(self.sample_rate as usize).with_max_length(MAX_BUFFER_SECONDS));
+                            self.stretch.push(Stretch::new()
+                                .with_sample_rate(self.sample_rate as usize)
+                                .with_max_buffer_size(MAX_BUFFER_SECONDS));
                         }
 
-                        self.rec_buffers[channel].push_mult(&mut samples);
+                        if channel >= self.variance.len() {
+                            self.variance.push(self.rng.range_f32(-1.0..1.0));
+                        }
 
-                        let speed = f32::clamp(params.speed.value(), MIN_SPEED, 1.0);
-                        let input_len = f32::ceil(samples.len() as f32 * speed) as usize;
-                        let mut input = vec![0.0; input_len];
-
-                        self.rec_buffers[channel].pop_mult(&mut input);
-                        self.stretch[channel].process(&mut input, &mut samples);
+                        let speed = f32::clamp(params.speed.value() + self.variance[channel] * params.variance.value(), MIN_SPEED, 1.0);
+                        self.stretch[channel].set_window_size(params.window.value());
+                        self.stretch[channel].process(&mut samples, speed);
                     },
                     None => {
                         self.log(format!("Could not get samples from block."));

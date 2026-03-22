@@ -49,6 +49,10 @@ pub fn parameter_label(ui: &mut Ui, text: impl Into<WidgetText>, tooltip_text: i
     ui.end_row();
 }
 
+pub fn param_label_short<P: Param>(ui: &mut Ui, param: &P) {
+    ui.label(String::from(param.name().chars().nth(0).expect("Parameter has no name.")));
+}
+
 pub fn param_info<P: Param>(ui: &mut Ui, param: &P) {
     ui.set_max_width(TOOLTIP_HOVER_WIDTH);
     if param.unit().is_empty() { 

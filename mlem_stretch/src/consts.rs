@@ -20,7 +20,7 @@ pub const PLUGIN_METADATA: PluginMetadata = PluginMetadata::new(
     &[ClapFeature::AudioEffect, ClapFeature::Stereo], 
     &[Vst3SubCategory::Fx, Vst3SubCategory::Tools], 
 
-    256,
-    146,
+    160,
+    104,
     mlem_egui_themes::MLEM_DARK
 );
