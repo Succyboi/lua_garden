@@ -1,5 +1,7 @@
 use std::{collections::VecDeque, usize};
-use crate::runtime::{buffers::RecBuffer, utils};
+use nih_plug_egui::egui::output;
+
+use crate::runtime::{buffers::RecBuffer, utils::{self, lerp}};
 
 const DEFAULT_WINDOW_SIZE: f32 = 0.1;
 const DEFAULT_MAX_BUFFER_SIZE: f32 = 60.0;
@@ -10,9 +12,9 @@ pub struct Stretch {
 
     buffer: RecBuffer,
     window_pos: f32,
-    window_start: usize,
-    window_end: usize,
-    window_offset: usize
+    window_start: f32,
+    window_end: f32,
+    window_offset: f32
 }
 
 impl Stretch {
@@ -24,9 +26,9 @@ impl Stretch {
             buffer: RecBuffer::new()
                 .with_max_length(DEFAULT_MAX_BUFFER_SIZE),
             window_pos: 0.0,
-            window_start: 0,
-            window_end: 0,
-            window_offset: 0
+            window_start: 0.0,
+            window_end: 0.0,
+            window_offset: 0.0
         };
 
         stretch.reset();
@@ -64,37 +66,47 @@ impl Stretch {
     pub fn reset(&mut self) {
         self.buffer.clear();
         self.window_pos = 0.0;
-        self.window_start = 0;
-        self.window_end = 0;
-        self.window_offset = 0;
+        self.window_start = 0.0;
+        self.window_end = 0.0;
+        self.window_offset = 0.0;
     }
 
-    pub fn process(&mut self, mut output: impl AsMut<[f32]>, speed: f32) {
+    pub fn process(&mut self, mut output: impl AsMut<[f32]>, speed: f32, pitch: f32) {
         let output = output.as_mut();
-
         self.buffer.push_mult(&output);
 
         let mut index = 0;
         while index < output.len() {
-            output[index] = self.buffer[self.window_start + self.window_offset];
+            output[index] = self.next(speed, pitch);
 
             index += 1;
-            self.window_pos += 1.0 * speed;
-            self.window_offset += 1;
-
-            if self.window_start + self.window_offset > self.window_end {
-                self.window_start = utils::previous_zero_crossing(&self.buffer, self.buffer.buffer().len(), f32::floor(self.window_pos) as usize, self.default_window_len());
-                self.window_end = utils::next_zero_crossing(&self.buffer, self.buffer.buffer().len(), self.window_start + self.window_len(), self.default_window_len());
-                self.window_offset = 0;
-            }
         }
     }
 
-    fn window_len(&self) -> usize {
-        return f32::floor(self.window_size * self.sample_rate as f32) as usize;
+    fn next(&mut self, speed: f32, pitch: f32) -> f32 {
+        let pos = self.window_start + self.window_offset;
+        let pos_f = self.buffer[f32::floor(pos) as usize];
+        let pos_c = self.buffer[f32::ceil(pos) as usize];
+        let pos_t = pos - f32::floor(pos);
+        
+        self.window_pos += 1.0 * speed;
+        self.window_offset += 1.0 * pitch;
+
+        let window_end = self.window_start + (self.window_end - self.window_start) /* * pitch <- cool length correction that causes clicking*/;
+        if self.window_start + self.window_offset > window_end {
+            self.window_start = utils::previous_zero_crossing(&self.buffer, usize::MAX, f32::floor(self.window_pos - self.window_len() * f32::max(pitch - 1.0, 0.0)) as usize, self.default_window_len() as usize) as f32;
+            self.window_end = utils::nearest_zero_crossing(&self.buffer, usize::MAX, f32::floor(self.window_start + self.window_len() * pitch) as usize, self.default_window_len() as usize) as f32;
+            self.window_offset = 0.0;
+        }
+
+        return lerp(pos_f, pos_c, pos_t);
     }
 
-    fn default_window_len(&self) -> usize {
-        return f32::floor(DEFAULT_WINDOW_SIZE * self.sample_rate as f32) as usize;
+    fn window_len(&self) -> f32 {
+        return self.window_size * self.sample_rate as f32;
+    }
+
+    fn default_window_len(&self) -> f32 {
+        return DEFAULT_WINDOW_SIZE * self.sample_rate as f32;
     }
 }

@@ -1,6 +1,7 @@
 use std::sync::atomic::Ordering;
 
 use mlem_base::console::ConsoleSender;
+use mlem_base::runtime::pitch::{self, semitone_to_playback_speed};
 use mlem_base::runtime::rng::{self, Rng, RngSplitMix64};
 use crate::consts::PLUGIN_METADATA;
 use crate::{ StretchParams };
@@ -10,8 +11,8 @@ use mlem_base::runtime::utils::{ self };
 use mlem_base::runtime::stretch::Stretch;
 
 const MIN_SPEED: f32 = 0.001;
-const MAX_BUFFER_SECONDS: f32 = 60.0;
 
+// FIX artefacts at 1.0 speed.
 pub struct Runtime {
     pub console: Option<ConsoleSender>,
 
@@ -92,6 +93,10 @@ impl Runtime {
                     }
                 }
             }
+        } else {
+            for s in self.stretch.iter_mut() {
+                s.set_max_buffer_size(params.buffer.value());
+            }
         }
 
         self.run_time.process( execute_timer.elapsed_ms(), self.sample_rate);
@@ -106,7 +111,7 @@ impl Runtime {
                         if channel >= self.stretch.len() {
                             self.stretch.push(Stretch::new()
                                 .with_sample_rate(self.sample_rate as usize)
-                                .with_max_buffer_size(MAX_BUFFER_SECONDS));
+                                .with_max_buffer_size(params.buffer.value()));
                         }
 
                         if channel >= self.variance.len() {
@@ -114,8 +119,10 @@ impl Runtime {
                         }
 
                         let speed = f32::clamp(params.speed.value() + self.variance[channel] * params.variance.value(), MIN_SPEED, 1.0);
+                        let pitch = semitone_to_playback_speed(params.pitch.value() as f32);
+
                         self.stretch[channel].set_window_size(params.window.value());
-                        self.stretch[channel].process(&mut samples, speed);
+                        self.stretch[channel].process(&mut samples, speed, pitch);
                     },
                     None => {
                         self.log(format!("Could not get samples from block."));

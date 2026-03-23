@@ -1,4 +1,4 @@
-use std::any::{Any, TypeId};
+use std::{any::{Any, TypeId}, usize};
 use nih_plug_egui::egui::{
     self, DragValue, Key, Response, Sense, Stroke, TextEdit, TextStyle, Ui, Vec2, Widget, WidgetText, emath::{self, Float}, vec2
 };
@@ -7,13 +7,14 @@ use crate::interface::{PARAM_WIDTH, utils::{self, param_info, param_label_short}
 
 const DRAG_SPEED_DEFAULT: f32 = 0.01;
 const DRAG_SPEED_GRANULAR: f32 = 0.0001;
-const MAX_DECIMALS: usize = 2;
+const DEFAULT_MAX_DECIMALS: usize = 2;
 
 #[must_use = "You should put this widget in an ui with `ui.add(widget);`"]
 pub struct ParamDragValue<'a, P: Param> {
     param: &'a P,
     setter: &'a ParamSetter<'a>,
 
+    decimals: usize,
     fixed: bool,
     draw_label: bool,
     draw_unit: bool,
@@ -30,12 +31,18 @@ impl<'a, P: Param> ParamDragValue<'a, P> {
             param,
             setter,
 
+            decimals: DEFAULT_MAX_DECIMALS,
             fixed: true,
             draw_label: true,
             draw_unit: true,
 
             keyboard_focus_id: None,
         }
+    }
+
+    pub fn with_decimals(mut self, decimals: usize) -> Self {
+        self.decimals = decimals;
+        self
     }
 
     /// Don't draw the text slider's current value after the slider.
@@ -108,12 +115,14 @@ impl Widget for ParamDragValue<'_, FloatParam> {
             let original_value = self.param.range().unnormalize(self.normalized_value());
             let mut value = original_value;
             let drag_speed = if ui.input(|i| i.modifiers.shift) { DRAG_SPEED_GRANULAR } else { DRAG_SPEED_DEFAULT };
+            let unit = if self.draw_unit { self.param.unit() } else { "" };
             let response = ui.add(
                 DragValue::new(&mut value)
                 .speed(range as f32 * drag_speed)
                 .range(min..=max)
-                .max_decimals(MAX_DECIMALS)
+                .max_decimals(self.decimals)
                 .update_while_editing(false)
+                .suffix(unit)
             );
             
             if self.draw_label && !response.has_focus() && !response.lost_focus() {
@@ -122,11 +131,6 @@ impl Widget for ParamDragValue<'_, FloatParam> {
 
             if self.fixed {
                 utils::fill_seperator_available(ui);
-            }
-
-            let unit = self.param.unit();
-            if self.draw_unit && !unit.is_empty() {
-                ui.label(self.param.unit());
             }
 
             if value != original_value {
@@ -168,12 +172,14 @@ impl Widget for ParamDragValue<'_, IntParam> {
             let original_value = self.param.range().unnormalize(self.normalized_value());
             let mut value = original_value;
             let drag_speed = if ui.input(|i| i.modifiers.shift) { DRAG_SPEED_GRANULAR } else { DRAG_SPEED_DEFAULT };
+            let unit = if self.draw_unit { self.param.unit() } else { "" };
             let response = ui.add(
                 DragValue::new(&mut value)
                 .speed(range as f32 * drag_speed)
                 .range(min..=max)
                 .max_decimals(0)
                 .update_while_editing(false)
+                .suffix(unit)
             );
 
             if self.draw_label && !response.has_focus() && !response.lost_focus() {
@@ -182,11 +188,6 @@ impl Widget for ParamDragValue<'_, IntParam> {
 
             if self.fixed {
                 utils::fill_seperator_available(ui);
-            }
-
-            let unit = self.param.unit();
-            if self.draw_unit && !unit.is_empty() {
-                ui.label(self.param.unit());
             }
 
             if value != original_value {

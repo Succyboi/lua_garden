@@ -2,6 +2,10 @@ use std::{ops::Index, time::Instant, usize};
 
 use nih_plug_egui::egui::output;
 
+pub fn lerp(a: f32, b: f32, t: f32) -> f32 {
+    return a + (b - a) * t;
+}
+
 pub fn clip(input: f32) -> f32 {
     return f32::clamp(input, -1.0, 1.0)
 }

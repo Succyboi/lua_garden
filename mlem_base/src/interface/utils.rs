@@ -55,28 +55,15 @@ pub fn param_label_short<P: Param>(ui: &mut Ui, param: &P) {
 
 pub fn param_info<P: Param>(ui: &mut Ui, param: &P) {
     ui.set_max_width(TOOLTIP_HOVER_WIDTH);
-    if param.unit().is_empty() { 
-        ui.label(format!("{name}", name = param.name()));
-    } else { 
-        ui.label(format!("{name} ({unit})", name = param.name(), unit = param.unit()));
-    };
 
-    parameter_grid(ui, HOVER_HASH, |ui| {
-        ui.label("Value");
+    ui.horizontal(|ui| {
+        if param.unit().is_empty() { 
+            ui.label(format!("{name}", name = param.name()));
+        } else { 
+            ui.label(format!("{name} ({unit})", name = param.name(), unit = param.unit()));
+        };
+
         ui.monospace(param.normalized_value_to_string(param.modulated_normalized_value(), true));
-        ui.end_row();
-
-        ui.label("Min");
-        ui.monospace(param.normalized_value_to_string(0.0, true));
-        ui.end_row();
-
-        ui.label("Max");
-        ui.monospace(param.normalized_value_to_string(1.0, true));
-        ui.end_row();
-
-        ui.label("Default");
-        ui.monospace(param.normalized_value_to_string(param.default_normalized_value(), true));
-        ui.end_row();
     });
 }
 
