@@ -1,12 +1,13 @@
 pub mod consts;
 pub mod runtime;
 
+use mlem_base::base::{mlem_interface::MlemInterface, mlem_params::MlemParams, mlem_plugin::MlemPlugin, mlem_metadata::MlemMetadata, mlem_runtime::MlemRuntime};
 use atomic_float::{ AtomicF32, AtomicF64 };
 use mlem_base::{interface::{param_drag_value, param_toggle, utils::{fill_seperator_available, parameter_grid, parameter_label}}, metadata::PluginMetadata, parameters::PluginParameters};
 use runtime::{ Runtime };
 use mlem_base::{ interface::{ Interface }, PluginImplementation };
 use nih_plug::prelude::*;
-use std::{collections::VecDeque, ops::Deref, sync::{ Arc, atomic::{AtomicBool, AtomicUsize, Ordering} }, time::{SystemTime, UNIX_EPOCH}};
+use std::{collections::VecDeque, default, ops::Deref, sync::{ Arc, atomic::{AtomicBool, AtomicUsize, Ordering} }, time::{SystemTime, UNIX_EPOCH}};
 use nih_plug_egui::{EguiState, egui::{Align, Context, Layout, Ui}};
 use consts::PLUGIN_METADATA;
 
@@ -16,9 +17,9 @@ const MIN_BUFFER_SECONDS: f32 = 0.1;
 const MAX_BUFFER_SECONDS: f32 = 60.0;
 
 pub struct Stretch {
-    runtime: Runtime,
     params: Arc<StretchParams>,
-    implementation: Arc<StretchImplementation>,
+    interface: Arc<StretchInterface>,
+    runtime: Arc<StretchRuntime>,
 }
 
 #[derive(Params)]
@@ -37,21 +38,40 @@ pub struct StretchParams {
     run_ms: AtomicF32,
 }
 
-pub struct StretchImplementation { 
-    params: Arc<StretchParams>,
+pub struct StretchInterface { 
+    stretch_time: f32
+}
 
-    stretch_time: AtomicF32
+pub struct StretchRuntime { }
+
+impl MlemParams for StretchParams {
+    fn sample_rate(&self) -> &AtomicF32 {
+        return &self.sample_rate;        
+    }
+
+    fn buffer_size(&self) -> &AtomicUsize {
+        return &self.buffer_size;
+    }
+
+    fn channels(&self) -> &AtomicUsize {
+        return &self.channels;
+    }
+
+    fn run_ms(&self) -> &AtomicF32 {
+        return &self.run_ms;
+    }
 }
 
 impl Default for Stretch {
     fn default() -> Self {
-        let runtime = Runtime::new(None);
         let params = Arc::new(StretchParams::default());
+        let interface = Arc::new(StretchInterface::new());
+        let runtime = Arc::new(StretchRuntime::new());
 
         let stretch = Self {
-            runtime: runtime,
             params: params.clone(),
-            implementation: Arc::new(StretchImplementation::new(params.clone())),
+            runtime: runtime.clone(),
+            interface: interface.clone(),
         };
 
         return stretch;
@@ -77,16 +97,14 @@ impl Default for StretchParams {
     }
 }
 
-impl PluginParameters for StretchParams {
-    fn sample_rate(&self) -> &AtomicF32 { &self.sample_rate }
-    fn buffer_size(&self) -> &AtomicUsize { &self.buffer_size }
-    fn channels(&self) -> &AtomicUsize { &self.channels }
-    fn run_ms(&self) -> &AtomicF32 { &self.run_ms }
-}
 
-impl Stretch { }
+impl StretchInterface {
+    fn new() -> Self {
+        return Self {
+            stretch_time: 0.0
+        };
+    }
 
-impl StretchImplementation {
     fn get_stretch_string(&self) -> String {
         if self.params.stretch.value() {
             self.stretch_time.store(self.stretch_time.load(Ordering::Relaxed) + self.params.speed.value() * 0.2, Ordering::Relaxed);
@@ -104,45 +122,31 @@ impl StretchImplementation {
     }
 }
 
-impl PluginImplementation<StretchParams> for StretchImplementation {
-    fn new(params: Arc<StretchParams>) -> StretchImplementation {
-        return Self {
-            params: params.clone(),
-
-            stretch_time: AtomicF32::from(0.0),
-        }
-    }
-
-    fn metadata(&self) -> PluginMetadata {
-        return PLUGIN_METADATA;
-    }
-
-    fn params(&self) -> Arc<StretchParams> {
-        return self.params.clone();
-    }
-
-    fn interface_build(&self, _ctx: &Context) { }
-
-    fn interface_update_center(&self, ui: &mut Ui, _ctx: &Context, setter: &ParamSetter) {
+impl MlemInterface for StretchInterface {
+    fn build(&self, ctx: &Context) { }
+    
+    fn update_bar(&self, ui: &mut Ui, ctx: &Context, setter: &ParamSetter) { }
+    
+    fn update_center(&self, ui: &mut Ui, ctx: &Context, setter: &ParamSetter) {
         ui.horizontal(|ui| {
             ui.add(param_toggle::ParamToggle::for_param(&self.params.stretch, setter, "Stretch", "Stretch"));
             ui.add(param_drag_value::ParamDragValue::for_param(&self.params.speed, setter));
         });
         
         ui.add_space(8.0);
-
+        
         ui.horizontal(|ui| {
             ui.add(param_drag_value::ParamDragValue::for_param(&self.params.variance, setter));
             ui.add(param_drag_value::ParamDragValue::for_param(&self.params.window, setter));
         });
-
+        
         ui.horizontal(|ui| {
             ui.add(param_drag_value::ParamDragValue::for_param(&self.params.pitch, setter).with_decimals(0));
             ui.add_enabled_ui(!*&self.params.stretch.value(), |ui| {
                 ui.add(param_drag_value::ParamDragValue::for_param(&self.params.buffer, setter).with_decimals(0));
             });
         });
-
+        
         ui.separator();
         ui.horizontal(|ui| {
             ui.add_enabled_ui(false, |ui| {
@@ -151,9 +155,45 @@ impl PluginImplementation<StretchParams> for StretchImplementation {
             });
         });
     }
+}
 
-    fn interface_update_bar(&self, ui: &mut Ui, _ctx: &Context, _setter: &ParamSetter) {
+impl StretchRuntime {
+    fn new() -> Self {
+        return Self { };
+    }
+}
+
+impl MlemRuntime for StretchRuntime {
+    fn init(&mut self, sample_rate: f32) {
         
+    }
+    
+    fn reset(&mut self) {
+        
+    }
+    
+    fn run(&mut self, buffer: &mut Buffer, params: &StretchParams, transport: &Transport) {
+        
+    }
+}
+
+impl Stretch { }
+
+impl MlemPlugin for Stretch {
+    fn interface(&self) ->  Arc<dyn MlemInterface> {
+        return self.interface.clone();
+    }
+    
+    fn metadata(&self) -> MlemMetadata {
+        return consts::PLUGIN_METADATA;
+    }
+    
+    fn params(&self) ->  Arc<dyn MlemParams> {
+        return self.params.clone();
+    }
+
+    fn runtime(&self) ->  Arc<dyn MlemRuntime> {
+        return self.runtime.clone();
     }
 }
 
@@ -187,7 +227,7 @@ impl Plugin for Stretch {
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
-        let interface = Interface::new(consts::PLUGIN_METADATA, self.implementation.clone());
+        let interface = Interface::new(self.implementation.clone());
         
         let editor_state = self.params.editor_state.clone();
         self.runtime.console = Some(interface.console.create_sender());

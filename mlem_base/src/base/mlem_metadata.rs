@@ -2,7 +2,7 @@ use mlem_egui_themes::Theme;
 use nih_plug::{ prelude::* };
 use crate::consts;
 
-pub struct PluginMetadata {
+pub struct MlemMetadata {
     pub build_type: &'static str,
     pub build_is_debug: bool,
     pub build_id: &'static str,
@@ -31,7 +31,7 @@ pub struct PluginMetadata {
     pub window_theme: Theme
 }
 
-impl PluginMetadata {
+impl MlemMetadata {
     pub const fn new(
         icon: &'static str,
         name: &'static str,

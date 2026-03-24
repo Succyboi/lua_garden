@@ -7,7 +7,7 @@ use std::{ hash::Hash, sync::{ Arc, RwLock, atomic::Ordering } };
 use mlem_egui_themes::Theme;
 use nih_plug::{ plugin, prelude::*, util::gain_to_db };
 use nih_plug_egui::{ EguiState, egui::{ self, Align, Context, Layout, Ui } };
-use crate::{ PluginImplementation, console::ConsoleReceiver, consts, interface::utils::{fill_seperator_available, help_label, parameter_grid, parameter_label}, metadata::PluginMetadata, parameters::PluginParameters };
+use crate::{ base::{mlem_interface::MlemInterface, mlem_metadata::MlemMetadata, mlem_params::MlemParams, mlem_plugin::MlemPlugin}, console::ConsoleReceiver, consts, interface::utils::{fill_seperator_available, help_label, parameter_grid, parameter_label} };
 
 pub const DEFAULT_SPACE: f32 = 4.0;
 pub const PARAM_WIDTH: f32 = 64.0;
@@ -22,24 +22,18 @@ pub enum InterfaceCenterViewState {
     Plugin
 }
 
-pub struct Interface<T: PluginImplementation<U>, U: PluginParameters> {
+pub struct Interface<T: MlemPlugin> {
     pub console: ConsoleReceiver,
-    metadata: PluginMetadata,
-    implementation: Arc<T>,
-    params: Arc<U>,
+    plugin: Arc<T>,
 
     center_view: InterfaceCenterViewState
 }
 
-impl<T: PluginImplementation<U>, U: PluginParameters> Interface<T, U> {
-    pub fn new(metadata: PluginMetadata, implementation: Arc<T>) -> Interface<T, U> {
-        let params = implementation.params().clone();
-
+impl<T: MlemPlugin> Interface<T> {
+    pub fn new(plugin: Arc<T>) -> Interface<T> {
         return Self {
             console: ConsoleReceiver::new(),
-            metadata, 
-            implementation,
-            params: params,
+            plugin,
 
             center_view: InterfaceCenterViewState::Plugin
         };
@@ -67,17 +61,17 @@ impl<T: PluginImplementation<U>, U: PluginParameters> Interface<T, U> {
     }
 
     fn build_interface(&mut self, ctx: &Context, _state: &mut ()) {
-        mlem_egui_themes::set_theme(ctx, self.get_theme());
+        mlem_egui_themes::set_theme(ctx, self.theme());
 
         self.console.log(format!("Initializing {name} v{version}.", name = consts::NAME, version = consts::VERSION));
         self.console.log(format!(""));
         self.console.log(format!("---"));
-        self.console.log(format!("{name} \"{description}\" v{version} {build_type} ({id}).", name = self.metadata.name, description = self.metadata.description, version = self.metadata.version, build_type = self.metadata.build_type, id = self.metadata.build_id));
-        self.console.log(format!("By {}", self.metadata.authors));
+        self.console.log(format!("{name} \"{description}\" v{version} {build_type} ({id}).", name = self.metadata().name, description = self.metadata().description, version = self.metadata().version, build_type = self.metadata().build_type, id = self.metadata().build_id));
+        self.console.log(format!("By {}", self.metadata().authors));
         self.console.log(format!("---"));
         self.console.log(format!(""));
 
-        self.implementation.interface_build(ctx);
+        self.interface().build(ctx);
     }
     
     fn draw_interface(&mut self, ctx: &Context, setter: &ParamSetter, _state: &mut ()) {    
@@ -104,11 +98,11 @@ impl<T: PluginImplementation<U>, U: PluginParameters> Interface<T, U> {
 
         let mut button_response = match self.center_view {
             InterfaceCenterViewState::Plugin => {
-                ui.button(format!("{icon}", icon = self.metadata.icon))
+                ui.button(format!("{icon}", icon = self.metadata().icon))
             }
 
             InterfaceCenterViewState::About => {
-                ui.button(format!("{icon} Hide", icon = self.metadata.icon))
+                ui.button(format!("{icon} Hide", icon = self.metadata().icon))
             }
 
             InterfaceCenterViewState::Console => {
@@ -136,7 +130,7 @@ impl<T: PluginImplementation<U>, U: PluginParameters> Interface<T, U> {
 
         button_response.on_hover_ui(|ui| {
             ui.set_max_width(utils::TOOLTIP_HOVER_WIDTH);
-            ui.monospace(format!("About {}.", self.metadata.name));
+            ui.monospace(format!("About {}.", self.metadata().name));
             ui.monospace("Secondary click to show console.");
         });
     }
@@ -150,15 +144,15 @@ impl<T: PluginImplementation<U>, U: PluginParameters> Interface<T, U> {
     }
 
     fn draw_plugin_center(&mut self, ui: &mut Ui, ctx: &Context, setter: &ParamSetter) {
-        self.implementation.interface_update_center(ui, ctx, setter);
+        self.interface().update_center(ui, ctx, setter);
     }
 
     fn draw_plugin_bar(&mut self, ui: &mut Ui, ctx: &Context, setter: &ParamSetter) {
-        self.implementation.interface_update_bar(ui, ctx, setter);
+        self.interface().update_bar(ui, ctx, setter);
     }
 
     fn draw_console(&mut self, ui: &mut Ui, _setter: &ParamSetter, hash: impl Hash) {     
-        let params = self.implementation.params();
+        let params = self.params();
 
         ui.vertical(|ui| {
             ui.horizontal(|ui| {
@@ -188,7 +182,7 @@ impl<T: PluginImplementation<U>, U: PluginParameters> Interface<T, U> {
     fn draw_about(&mut self, ui: &mut Ui) {
         egui::ScrollArea::vertical().show(ui, |ui| {
             self.draw_name(ui);
-            ui.label(self.metadata.description);
+            ui.label(self.metadata().description);
             ui.separator();
             
             self.draw_info(ui);
@@ -196,29 +190,41 @@ impl<T: PluginImplementation<U>, U: PluginParameters> Interface<T, U> {
             ui.separator();
             ui.label("Credits");
 
-            ui.monospace(format!("By {authors}", authors = self.metadata.authors));
+            ui.monospace(format!("By {authors}", authors = self.metadata().authors));
             ui.separator();
-            ui.monospace(format!("{}", self.metadata.credits));
+            ui.monospace(format!("{}", self.metadata().credits));
 
             ui.separator();
             ui.label("License");
-            ui.monospace(format!("{}", self.metadata.license_contents));        
+            ui.monospace(format!("{}", self.metadata().license_contents));        
         });
     }
 
     fn draw_name(&mut self, ui: &mut Ui) {
-        ui.heading(format!("{icon} {name}", icon = self.metadata.icon, name = self.metadata.name));
+        ui.heading(format!("{icon} {name}", icon = self.metadata().icon, name = self.metadata().name));
     }
 
     fn draw_info(&mut self, ui: &mut Ui) {
-        ui.label(format!("v{version} {profile} ({id})", version = self.metadata.version, profile = self.metadata.build_type, id = self.metadata.build_id));
+        ui.label(format!("v{version} {profile} ({id})", version = self.metadata().version, profile = self.metadata().build_type, id = self.metadata().build_id));
         ui.horizontal(|ui| {
             ui.label("By");
-            ui.hyperlink_to(self.metadata.vendor, self.metadata.homepage_url);
+            ui.hyperlink_to(self.metadata().vendor, self.metadata().homepage_url);
         });
     }
 
-    fn get_theme(&self) -> Theme {
-        return self.metadata.window_theme;
+    fn theme(&self) -> Theme {
+        return self.metadata().window_theme;
+    }
+
+    fn metadata(&self) -> MlemMetadata {
+        return self.plugin.metadata();
+    }
+
+    fn params(&self) -> Arc<dyn MlemParams> {
+        return self.plugin.params();
+    }
+
+    fn interface(&self) -> Arc<dyn MlemInterface> {
+        return self.plugin.interface();
     }
 }
