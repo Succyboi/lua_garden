@@ -4,9 +4,6 @@ use mlem_base::{base::mlem_runtime::MlemRuntime, console::ConsoleSender, runtime
 use nih_plug::{buffer::Buffer, prelude::Transport};
 use crate::params::MeterParams;
 
-const MIN_SPEED: f32 = 0.001;
-
-// TODO fix artefacts at speed 1
 pub struct MeterRuntime { 
     params: Arc<MeterParams>,
     console: ConsoleSender,
@@ -117,6 +114,5 @@ impl MlemRuntime<MeterParams> for MeterRuntime {
                 self.console.log(format!("Failed to run EbuR128: {}", e));
             }
         }
-
     }
 }
