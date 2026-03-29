@@ -1,6 +1,4 @@
-use std::{collections::VecDeque, ops::Index, process::Output};
-
-use nih_plug::buffer;
+use std::{collections::VecDeque, ops::Index};
 
 pub struct RecBuffer {
     sample_rate: usize,

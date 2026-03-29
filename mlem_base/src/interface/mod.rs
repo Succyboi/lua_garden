@@ -5,9 +5,9 @@ pub mod param_toggle;
 
 use std::{ hash::Hash, sync::{ Arc, RwLock, atomic::Ordering } };
 use mlem_egui_themes::Theme;
-use nih_plug::{ plugin, prelude::*, util::gain_to_db };
-use nih_plug_egui::{ EguiState, egui::{ self, Align, Context, Layout, Ui } };
-use crate::{ base::{mlem_interface::MlemInterface, mlem_metadata::MlemMetadata, mlem_params::MlemParams, mlem_plugin::MlemPlugin}, console::ConsoleReceiver, consts, interface::utils::{fill_seperator_available, help_label, parameter_grid, parameter_label} };
+use nih_plug::{prelude::*};
+use nih_plug_egui::{ EguiState, egui::{ self, Context, Ui } };
+use crate::{ base::{mlem_interface::MlemInterface, mlem_metadata::MlemMetadata, mlem_params::MlemParams}, console::ConsoleReceiver, consts };
 
 pub const DEFAULT_SPACE: f32 = 4.0;
 pub const PARAM_WIDTH: f32 = 64.0;

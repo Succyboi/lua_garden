@@ -1,5 +1,5 @@
 use std::{fs::File, io::{self, Read, Seek}, sync::{Arc, atomic::Ordering}};
-use mlem_base::{base::mlem_runtime::MlemRuntime, console::ConsoleSender, runtime::{rng::{Rng, RngSplitMix64}, utils::{self, Timer}}};
+use mlem_base::{base::mlem_runtime::MlemRuntime, console::ConsoleSender, runtime::{utils::{self}}};
 use nih_plug::{buffer::Buffer, prelude::Transport};
 use u4::{U4, U4x2};
 use crate::{consts, params::DataParams, read_mode::DataReadMode};
@@ -191,7 +191,7 @@ impl MlemRuntime<DataParams> for DataRuntime {
     
     fn reset(&mut self) { }
     
-    fn run(&mut self, buffer: &mut Buffer, transport: &Transport) {
+    fn run(&mut self, buffer: &mut Buffer, _transport: &Transport) {
         let refresh_path = self.params.path_refresh.load(Ordering::Relaxed);
         if refresh_path {
             let _ = self.update_data_from_file();

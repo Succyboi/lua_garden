@@ -1,7 +1,5 @@
-use nih_plug_egui::{egui::{
-    self, Response, SelectableLabel, Separator, Ui, Widget, WidgetText, vec2, widgets
-}};
-use nih_plug::{params::{BoolParam, EnumParam, enums::EnumParamInner}, prelude::{Enum, Param, ParamSetter}};
+use nih_plug_egui::{egui::{self, Response, Ui, Widget, vec2}};
+use nih_plug::{params::{EnumParam}, prelude::{Enum, Param, ParamSetter}};
 use crate::interface::{PARAM_WIDTH, utils::{self, param_info}};
 
 // TODO Doesn't respect param width

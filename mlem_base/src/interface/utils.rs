@@ -1,8 +1,5 @@
-use std::{fs::File, io::BufWriter, path::Path, sync::Arc};
-
-use nih_plug::prelude::{FloatRange, Param};
-use nih_plug_egui::egui::{self, Align, ColorImage, Context, DragValue, Grid, Layout, Response, RichText, Ui, UserData, Vec2, WidgetText, epaint::image, widgets};
-use crate::interface::param_drag_value::ParamDragValue;
+use nih_plug::prelude::{Param};
+use nih_plug_egui::egui::{self, Grid, RichText, Ui, Vec2, WidgetText, widgets};
 
 pub const HOVER_HASH: &str = "HOVER";
 pub const TOOLTIP_HOVER_WIDTH: f32 = 128.0;

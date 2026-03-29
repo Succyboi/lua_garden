@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use mlem_base::{base::mlem_runtime::MlemRuntime, console::ConsoleSender, runtime::{pitch::semitone_to_playback_speed, rng::{Rng, RngSplitMix64}, stretch::Stretch, utils}};
+use mlem_base::{base::mlem_runtime::MlemRuntime, console::ConsoleSender, runtime::{pitch::semitone_to_playback_speed, rng::{Rng, RngSplitMix64}, stretch::Stretch}};
 use nih_plug::{buffer::Buffer, prelude::Transport};
 use crate::params::StretchParams;
 
@@ -76,7 +76,7 @@ impl MlemRuntime<StretchParams> for StretchRuntime {
         self.variance.clear();
     }
     
-    fn run(&mut self, buffer: &mut Buffer, transport: &Transport) {
+    fn run(&mut self, buffer: &mut Buffer, _transport: &Transport) {
         let active = self.params.stretch.value();
         let reset = !active && self.last_active;
         self.last_active = active;

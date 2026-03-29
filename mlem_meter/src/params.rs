@@ -1,12 +1,9 @@
 use std::sync::{Arc, atomic::{AtomicBool, AtomicUsize}};
 use atomic_float::{AtomicF32, AtomicF64};
 use mlem_base::base::mlem_params::MlemParams;
-use nih_plug::{params::{BoolParam, FloatParam, Params}, prelude::FloatRange};
+use nih_plug::{params::{BoolParam, Params}};
 use nih_plug_egui::EguiState;
 use crate::consts::PLUGIN_METADATA;
-
-const MIN_BUFFER_SECONDS: f32 = 0.1;
-const MAX_BUFFER_SECONDS: f32 = 60.0;
 
 #[derive(Params)]
 pub struct MeterParams {

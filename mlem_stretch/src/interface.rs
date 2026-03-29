@@ -44,11 +44,11 @@ impl MlemInterface<StretchParams> for StretchInterface {
         return self.params.clone();
     }
 
-    fn build(&mut self, ctx: &Context) { }
+    fn build(&mut self, _ctx: &Context) { }
     
-    fn update_bar(&mut self, ui: &mut Ui, ctx: &Context, setter: &ParamSetter) { }
+    fn update_bar(&mut self, _ui: &mut Ui, _ctx: &Context, _setter: &ParamSetter) { }
     
-    fn update_center(&mut self, ui: &mut Ui, ctx: &Context, setter: &ParamSetter) {
+    fn update_center(&mut self, ui: &mut Ui, _ctx: &Context, setter: &ParamSetter) {
         ui.horizontal(|ui| {
             ui.add(ParamToggle::for_param(&self.params.stretch, setter, "Stretch", "Stretch"));
             ui.add(ParamDragValue::for_param(&self.params.speed, setter));

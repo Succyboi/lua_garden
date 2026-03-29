@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use nih_plug::prelude::ParamSetter;
 use nih_plug_egui::egui::{Context, Ui};
-use crate::base::{mlem_params::MlemParams, mlem_plugin::MlemPlugin};
+use crate::base::{mlem_params::MlemParams};
 
 pub trait MlemInterface<T: MlemParams>: 'static + Send + Sync {
     fn params(&self) ->  Arc<T>;

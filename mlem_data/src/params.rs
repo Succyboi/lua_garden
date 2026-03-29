@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex, atomic::{AtomicBool, AtomicUsize}};
-use atomic_float::{AtomicF32, AtomicF64};
+use atomic_float::{AtomicF32};
 use mlem_base::base::mlem_params::MlemParams;
-use nih_plug::{params::{BoolParam, EnumParam, FloatParam, Params}, prelude::FloatRange};
+use nih_plug::{params::{BoolParam, EnumParam, Params}};
 use nih_plug_egui::{EguiState};
 use crate::{consts::PLUGIN_METADATA, read_mode::DataReadMode};
 

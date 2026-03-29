@@ -3,13 +3,10 @@ pub mod params;
 pub mod interface;
 pub mod runtime;
 
-use mlem_base::{base::{mlem_interface::MlemInterface, mlem_metadata::MlemMetadata, mlem_params::MlemParams, mlem_plugin::MlemPlugin, mlem_runtime::MlemRuntime}, console::ConsoleSender, runtime::Runtime};
-use atomic_float::{ AtomicF32 };
-use mlem_base::{interface::{param_drag_value, param_toggle }};
+use mlem_base::{base::{mlem_metadata::MlemMetadata, mlem_plugin::MlemPlugin}, runtime::Runtime};
 use mlem_base::{ interface::{ Interface } };
 use nih_plug::prelude::*;
-use std::{collections::VecDeque, default, ops::Deref, sync::{ Arc, atomic::{AtomicBool, AtomicUsize, Ordering} }, time::{SystemTime, UNIX_EPOCH}};
-use nih_plug_egui::{EguiState, egui::{Align, Context, Layout, Ui}};
+use std::{sync::{ Arc }};
 use consts::PLUGIN_METADATA;
 use crate::{interface::MeterInterface, params::MeterParams, runtime::MeterRuntime};
 

@@ -1,6 +1,6 @@
 use std::{io::Error, str::FromStr, sync::{Arc, Mutex, atomic::Ordering}};
 use egui_file::FileDialog;
-use mlem_base::{base::mlem_interface::MlemInterface, interface::{self, param_combo_box, param_drag_value::ParamDragValue, param_toggle::{self, ParamToggle}, utils::{parameter_grid, parameter_label}}};
+use mlem_base::{base::mlem_interface::MlemInterface, interface::{self, param_combo_box, param_toggle::{self}}};
 use nih_plug::prelude::ParamSetter;
 use nih_plug_egui::egui::{Align, Context, Layout, Ui, Vec2};
 use crate::{consts::{self, PLUGIN_METADATA}, params::{DATA_PREVIEW_SIZE_FULL, DATA_PREVIEW_SIZE_SMALL, DataParams, MAX_MONOSPACE_WIDTH}};
@@ -131,7 +131,7 @@ impl MlemInterface<DataParams> for MeterInterface {
         return self.params.clone();
     }
 
-    fn build(&mut self, ctx: &Context) { }
+    fn build(&mut self, _ctx: &Context) { }
     
     fn update_bar(&mut self, ui: &mut Ui, ctx: &Context, setter: &ParamSetter) {
         self.bar_mute(ui, setter);
@@ -139,7 +139,7 @@ impl MlemInterface<DataParams> for MeterInterface {
         self.bar_folder(ui, ctx);
     }
     
-    fn update_center(&mut self, ui: &mut Ui, ctx: &Context, setter: &ParamSetter) {
+    fn update_center(&mut self, ui: &mut Ui, _ctx: &Context, setter: &ParamSetter) {
         ui.horizontal(|ui| {
             ui.add(param_toggle::ParamToggle::for_param(&self.params.mono, setter, "Mono", "Stereo").fill(false));
             ui.add(param_combo_box::ParamComboBox::for_param(&self.params.read_mode, setter).fill(false));

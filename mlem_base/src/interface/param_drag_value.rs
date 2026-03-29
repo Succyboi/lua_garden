@@ -1,7 +1,5 @@
-use std::{any::{Any, TypeId}, usize};
-use nih_plug_egui::egui::{
-    self, DragValue, Key, Response, Sense, Stroke, TextEdit, TextStyle, Ui, Vec2, Widget, WidgetText, emath::{self, Float}, vec2
-};
+use std::{usize};
+use nih_plug_egui::egui::{self, DragValue, Response, Ui, Widget, vec2};
 use nih_plug::{params::IntParam, prelude::{FloatParam, Param, ParamSetter}};
 use crate::interface::{PARAM_WIDTH, utils::{self, param_info, param_label_short}};
 
