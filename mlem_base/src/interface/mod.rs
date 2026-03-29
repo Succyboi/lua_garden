@@ -23,7 +23,6 @@ pub enum InterfaceCenterViewState {
 }
 
 pub struct Interface<T: MlemParams, U: MlemInterface<T>> {
-    pub console: ConsoleReceiver,
     params: Arc<T>,
     interface: U,
     metadata: MlemMetadata,
@@ -34,7 +33,6 @@ pub struct Interface<T: MlemParams, U: MlemInterface<T>> {
 impl<T: MlemParams, U: MlemInterface<T>> Interface<T, U> {
     pub fn new(params: Arc<T>, interface: U, metadata: MlemMetadata) -> Interface<T, U> {
         return Self {
-            console: ConsoleReceiver::new(),
             params,
             interface,
             metadata,
@@ -67,13 +65,14 @@ impl<T: MlemParams, U: MlemInterface<T>> Interface<T, U> {
     fn build_interface(&mut self, ctx: &Context, _state: &mut ()) {
         mlem_egui_themes::set_theme(ctx, self.theme());
 
-        self.console.log(format!("Initializing {name} v{version}.", name = consts::NAME, version = consts::VERSION));
-        self.console.log(format!(""));
-        self.console.log(format!("---"));
-        self.console.log(format!("{name} \"{description}\" v{version} {build_type} ({id}).", name = self.metadata().name, description = self.metadata().description, version = self.metadata().version, build_type = self.metadata().build_type, id = self.metadata().build_id));
-        self.console.log(format!("By {}", self.metadata().authors));
-        self.console.log(format!("---"));
-        self.console.log(format!(""));
+        let mut console = ConsoleReceiver::get_singleton();
+        console.log(format!("Initializing {name} v{version}.", name = consts::NAME, version = consts::VERSION));
+        console.log(format!(""));
+        console.log(format!("---"));
+        console.log(format!("{name} \"{description}\" v{version} {build_type} ({id}).", name = self.metadata().name, description = self.metadata().description, version = self.metadata().version, build_type = self.metadata().build_type, id = self.metadata().build_id));
+        console.log(format!("By {}", self.metadata().authors));
+        console.log(format!("---"));
+        console.log(format!(""));
 
         self.interface().build(ctx);
     }
@@ -98,7 +97,8 @@ impl<T: MlemParams, U: MlemInterface<T>> Interface<T, U> {
     }
 
     fn draw_about_button(&mut self, ui: &mut Ui) {
-        let console_updated = self.console.update();
+        let mut console = ConsoleReceiver::get_singleton();
+        let console_updated = console.update();
 
         let mut button_response = match self.center_view {
             InterfaceCenterViewState::Plugin => {
@@ -172,7 +172,8 @@ impl<T: MlemParams, U: MlemInterface<T>> Interface<T, U> {
             });
 
             ui.with_layout(egui::Layout::top_down_justified(egui::Align::LEFT).with_cross_justify(true), |ui| {
-                let log_string = self.console.get_log_string();
+                let mut console = ConsoleReceiver::get_singleton();
+                let log_string = console.get_log_string();
                 
                 egui::ScrollArea::vertical()
                     .id_salt(hash)

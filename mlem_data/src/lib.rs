@@ -278,7 +278,7 @@ impl Plugin for Meter {
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
-        let interface = Interface::new(consts::PLUGIN_METADATA, self.implementation.clone());
+        let interface = Interface::new(self.params.clone() consts::PLUGIN_METADATA, self.implementation.clone());
         
         let editor_state = self.params.editor_state.clone();
         self.runtime.console = Some(interface.console.create_sender());

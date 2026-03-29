@@ -8,7 +8,7 @@ const MIN_SPEED: f32 = 0.001;
 // TODO fix artefacts at speed 1
 pub struct StretchRuntime { 
     params: Arc<StretchParams>,
-    pub console: Option<ConsoleSender>,
+    console: ConsoleSender,
 
     rng: RngSplitMix64,
     last_active: bool,
@@ -20,7 +20,7 @@ impl StretchRuntime {
     pub fn new(params: Arc<StretchParams>) -> Self {
         return Self { 
             params,
-            console: None,
+            console: ConsoleSender::from_singleton(),
 
             rng: RngSplitMix64::new(),
             last_active: false,
@@ -53,8 +53,7 @@ impl StretchRuntime {
                         self.stretch[channel].process(&mut samples, speed, pitch);
                     },
                     None => {
-                        // TODO time to do proper singleton logging
-                        //self.log(format!("Could not get samples from block."));
+                        self.console.log(format!("Could not get samples from block."));
                     }
                 };
             }

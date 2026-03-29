@@ -21,7 +21,7 @@ pub struct Stretch {
 impl Default for Stretch {
     fn default() -> Self {
         let params = Arc::new(StretchParams::default());
-        let runtime = Runtime::new(None, params.clone(), StretchRuntime::new(params.clone()));
+        let runtime = Runtime::new(params.clone(), StretchRuntime::new(params.clone()));
 
         let stretch = Self {
             params,
@@ -78,7 +78,6 @@ impl Plugin for Stretch {
         let interface = Interface::new(self.params.clone(), interface, self.metadata());
         
         let editor_state = self.params.editor_state.clone();
-        self.runtime.console = Some(interface.console.create_sender());
         let editor = interface.create_interface(editor_state);
 
         return editor;

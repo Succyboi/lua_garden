@@ -13,7 +13,7 @@ use nih_plug::{ prelude::* };
 use utils::{ RMS, Timer };
 
 pub struct Runtime<T: MlemParams, U: MlemRuntime<T>> {
-    pub console: Option<ConsoleSender>,
+    pub console: ConsoleSender,
     params: Arc<T>,
     runtime: U,
 
@@ -26,9 +26,9 @@ pub struct Runtime<T: MlemParams, U: MlemRuntime<T>> {
 }
 
 impl<T: MlemParams, U: MlemRuntime<T>> Runtime<T, U> {
-    pub fn new(console: Option<ConsoleSender>, params: Arc<T>, runtime: U) -> Runtime<T, U> {
+    pub fn new(params: Arc<T>, runtime: U) -> Runtime<T, U> {
         let runtime = Self {
-            console: console,
+            console: ConsoleSender::from_singleton(),
             params,
             runtime,
 
@@ -88,13 +88,6 @@ impl<T: MlemParams, U: MlemRuntime<T>> Runtime<T, U> {
     }
 
     fn log(&self, message: String) {
-        match &self.console {
-            Some(c) => {
-                c.log(message);
-            },
-            None => {
-                println!("No console exists for Runtime. Log not registered by receiver: {}", message)
-            }
-        }
+        self.console.log(message);
     }
 }

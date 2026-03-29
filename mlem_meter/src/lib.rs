@@ -1,135 +1,46 @@
 pub mod consts;
+pub mod params;
+pub mod interface;
 pub mod runtime;
 
-use atomic_float::{ AtomicF32, AtomicF64 };
-use mlem_base::{interface::{utils::{parameter_grid, parameter_label}, param_toggle}, metadata::PluginMetadata, parameters::PluginParameters};
-use runtime::{ Runtime };
-use mlem_base::{ interface::{ Interface }, PluginImplementation };
+use mlem_base::{base::{mlem_interface::MlemInterface, mlem_metadata::MlemMetadata, mlem_params::MlemParams, mlem_plugin::MlemPlugin, mlem_runtime::MlemRuntime}, console::ConsoleSender, runtime::Runtime};
+use atomic_float::{ AtomicF32 };
+use mlem_base::{interface::{param_drag_value, param_toggle }};
+use mlem_base::{ interface::{ Interface } };
 use nih_plug::prelude::*;
-use std::{ops::Deref, sync::{ Arc, atomic::{AtomicBool, AtomicUsize, Ordering} }};
+use std::{collections::VecDeque, default, ops::Deref, sync::{ Arc, atomic::{AtomicBool, AtomicUsize, Ordering} }, time::{SystemTime, UNIX_EPOCH}};
 use nih_plug_egui::{EguiState, egui::{Align, Context, Layout, Ui}};
 use consts::PLUGIN_METADATA;
+use crate::{interface::MeterInterface, params::MeterParams, runtime::MeterRuntime};
 
 pub struct Meter {
-    runtime: Runtime,
     params: Arc<MeterParams>,
-    implementation: Arc<MeterImplementation>
-}
-
-#[derive(Params)]
-pub struct MeterParams {
-    #[persist = "editor-state"] editor_state: Arc<EguiState>,
-    #[id = "reset_on_play"]     reset_on_play: BoolParam,
-    
-    sample_rate: AtomicF32,
-    buffer_size: AtomicUsize,
-    channels: AtomicUsize,
-    run_ms: AtomicF32,
-    
-    reset_meter: AtomicBool,
-    active_time_ms: AtomicF32,
-    lufs_global_loudness: AtomicF64,
-    lufs_momentary_loudness: AtomicF64,
-    lufs_range_loudness: AtomicF64,
-    lufs_shortterm_loudness: AtomicF64
-}
-
-pub struct MeterImplementation { 
-    params: Arc<MeterParams>
+    runtime: Runtime<MeterParams, MeterRuntime>
 }
 
 impl Default for Meter {
     fn default() -> Self {
-        let runtime = Runtime::new(None);
         let params = Arc::new(MeterParams::default());
+        let runtime = Runtime::new(params.clone(), MeterRuntime::new(params.clone()));
 
-        Self {
-            runtime: runtime,
-            params: params.clone(),
-            implementation: Arc::new(MeterImplementation::new(params.clone()))
-        }
+        let stretch = Self {
+            params,
+            runtime
+        };
+
+        return stretch;
     }
-}
-
-impl Default for MeterParams {
-    fn default() -> Self {
-        Self {
-            editor_state: EguiState::from_size(PLUGIN_METADATA.window_width, PLUGIN_METADATA.window_height),
-            reset_on_play: BoolParam::new("Reset On Play", true),
-
-            reset_meter: AtomicBool::new(false),
-            sample_rate: AtomicF32::new(0.0),
-            buffer_size: AtomicUsize::new(0),
-            channels: AtomicUsize::new(0),
-            run_ms: AtomicF32::new(0.0),
-
-            active_time_ms: AtomicF32::new(0.0),
-            lufs_global_loudness: AtomicF64::new(0.0),
-            lufs_momentary_loudness: AtomicF64::new(0.0),
-            lufs_range_loudness: AtomicF64::new(0.0),
-            lufs_shortterm_loudness: AtomicF64::new(0.0)
-        }
-    }
-}
-
-impl PluginParameters for MeterParams {
-    fn sample_rate(&self) -> &AtomicF32 { &self.sample_rate }
-    fn buffer_size(&self) -> &AtomicUsize { &self.buffer_size }
-    fn channels(&self) -> &AtomicUsize { &self.channels }
-    fn run_ms(&self) -> &AtomicF32 { &self.run_ms }
 }
 
 impl Meter { }
 
-impl PluginImplementation<MeterParams> for MeterImplementation {
-    fn new(params: Arc<MeterParams>) -> MeterImplementation {
-        return Self {
-            params: params.clone()
-        }
+impl MlemPlugin<MeterParams> for Meter {
+    fn metadata(&self) -> MlemMetadata {
+        return consts::PLUGIN_METADATA;
     }
-
-    fn metadata(&self) -> PluginMetadata {
-        return PLUGIN_METADATA;
-    }
-
-    fn params(&self) -> Arc<MeterParams> {
+    
+    fn params(&self) ->  Arc<MeterParams> {
         return self.params.clone();
-    }
-
-    fn interface_build(&self, _ctx: &Context) { }
-
-    fn interface_update_center(&self, ui: &mut Ui, _ctx: &Context, setter: &ParamSetter) {
-        parameter_grid(ui, "Meters", |ui| {
-            parameter_label(ui, "Integrated", "Loudness total since reset.", |ui| {
-                ui.monospace(format!("{: >6.2} lufs", self.params.lufs_global_loudness.load(Ordering::Relaxed)));
-            });
-
-            parameter_label(ui, "Momentary", "Loudness over a duration of 0.4 seconds.", |ui| {
-                ui.monospace(format!("{: >6.2} lufs", self.params.lufs_momentary_loudness.load(Ordering::Relaxed)));
-            });
-
-            parameter_label(ui, "Short Term", "Loudness over a duration of 3 seconds.", |ui| {
-                ui.monospace(format!("{: >6.2} lufs", self.params.lufs_shortterm_loudness.load(Ordering::Relaxed)));
-            });
-
-            parameter_label(ui, "Range", "Loudness range total since reset.", |ui| {
-                ui.monospace(format!("{: >6.2} lufs", self.params.lufs_range_loudness.load(Ordering::Relaxed)));
-            });
-
-            parameter_label(ui, "Reset On Play", "Resets metering when starting play.", |ui| {
-                ui.add(param_toggle::ParamToggle::for_param(&self.params.reset_on_play, setter, "Yes", "No"));
-            });
-        });
-    }
-
-    fn interface_update_bar(&self, ui: &mut Ui, _ctx: &Context, _setter: &ParamSetter) {
-        let seconds = self.params.active_time_ms.load(Ordering::Relaxed) / 1000.0;
-        let minutes = f32::floor(seconds / 60.0);
-        
-        if ui.button("Reset").clicked() {
-            self.params.reset_meter.store(true, Ordering::Relaxed);
-        }
-        ui.monospace(format!("{minutes: >1.0}m{seconds: >1.0}s", minutes = minutes, seconds = seconds - minutes * 60.0));    
     }
 }
 
@@ -163,10 +74,10 @@ impl Plugin for Meter {
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
-        let interface = Interface::new(consts::PLUGIN_METADATA, self.implementation.clone());
+        let interface = MeterInterface::new(self.params.clone());
+        let interface = Interface::new(self.params.clone(), interface, self.metadata());
         
         let editor_state = self.params.editor_state.clone();
-        self.runtime.console = Some(interface.console.create_sender());
         let editor = interface.create_interface(editor_state);
 
         return editor;
@@ -193,9 +104,7 @@ impl Plugin for Meter {
         _aux: &mut AuxiliaryBuffers,
         context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
-        let params = self.params.clone();
-
-        self.runtime.run(buffer, &params, context.transport());
+        self.runtime.run(buffer, context.transport());
 
         return ProcessStatus::Normal;
     }

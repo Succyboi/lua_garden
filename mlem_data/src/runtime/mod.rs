@@ -3,7 +3,7 @@ use std::fmt::format;
 use std::fs::File;
 use std::io::{self, Read, Seek};
 use std::{ fmt::Error, sync::atomic::Ordering };
-use mlem_base::console::ConsoleSender;
+use mlem_base::console::Console;
 use nih_plug_egui::egui::load;
 use u4::{U4, U4x2};
 use crate::consts;
@@ -16,7 +16,7 @@ const MAX_DATA_SIZE: usize = 1 * 1024 * 1024; // 1 Megabyte
 
 // TODO Figure out how to synthesize from bits
 pub struct Runtime {
-    pub console: Option<ConsoleSender>,
+    pub console: Option<Console>,
 
     sample_rate: f32,
     buffer_size: usize,
@@ -34,7 +34,7 @@ pub struct Runtime {
 }
 
 impl Runtime {
-    pub fn new(console: Option<ConsoleSender>) -> Runtime {
+    pub fn new(console: Option<Console>) -> Runtime {
         let runtime = Self {
             console: console,
 

@@ -1,6 +1,7 @@
-use std::{ collections::VecDeque, sync::{ mpsc::{channel, Receiver, Sender}, Arc, Mutex } };
+use std::{ collections::VecDeque, sync::{ Arc, LazyLock, Mutex, mpsc::{Receiver, Sender, channel} } };
 
 const STATUS_CAPACITY : usize = 64;
+static SINGLETON: LazyLock<Mutex<ConsoleReceiver>> = LazyLock::new(|| Mutex::new(ConsoleReceiver::new()));
 
 pub struct ConsoleReceiver {
     logs: VecDeque<String>,
@@ -36,6 +37,10 @@ impl ConsoleReceiver {
         };
 
         return console;
+    }
+
+    pub fn get_singleton() -> std::sync::MutexGuard<'static, ConsoleReceiver> {
+        return SINGLETON.lock().unwrap();
     }
 
     pub fn create_sender(&self) -> ConsoleSender {
@@ -101,6 +106,10 @@ impl ConsoleReceiver {
 }
 
 impl ConsoleSender {
+    pub fn from_singleton() -> ConsoleSender {
+        return ConsoleReceiver::get_singleton().create_sender();
+    }
+
     pub fn log(&self, message: String) {
         let log = ConsoleLog::new(message);
         self.send_log(log);

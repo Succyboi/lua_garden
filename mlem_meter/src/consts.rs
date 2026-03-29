@@ -1,7 +1,7 @@
-use mlem_base::metadata::PluginMetadata;
+use mlem_base::base::mlem_metadata::MlemMetadata;
 use nih_plug::prelude::*;
 
-pub const PLUGIN_METADATA: PluginMetadata = PluginMetadata::new(
+pub const PLUGIN_METADATA: MlemMetadata = MlemMetadata::new(
     "\u{E628}",
     env!("CARGO_PKG_NAME"),
     env!("CARGO_PKG_HOMEPAGE"),
