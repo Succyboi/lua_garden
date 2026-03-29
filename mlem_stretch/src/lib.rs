@@ -1,199 +1,46 @@
 pub mod consts;
+pub mod params;
+pub mod interface;
 pub mod runtime;
 
-use mlem_base::base::{mlem_interface::MlemInterface, mlem_params::MlemParams, mlem_plugin::MlemPlugin, mlem_metadata::MlemMetadata, mlem_runtime::MlemRuntime};
-use atomic_float::{ AtomicF32, AtomicF64 };
-use mlem_base::{interface::{param_drag_value, param_toggle, utils::{fill_seperator_available, parameter_grid, parameter_label}}, metadata::PluginMetadata, parameters::PluginParameters};
-use runtime::{ Runtime };
-use mlem_base::{ interface::{ Interface }, PluginImplementation };
+use mlem_base::{base::{mlem_interface::MlemInterface, mlem_metadata::MlemMetadata, mlem_params::MlemParams, mlem_plugin::MlemPlugin, mlem_runtime::MlemRuntime}, console::ConsoleSender, runtime::Runtime};
+use atomic_float::{ AtomicF32 };
+use mlem_base::{interface::{param_drag_value, param_toggle }};
+use mlem_base::{ interface::{ Interface } };
 use nih_plug::prelude::*;
 use std::{collections::VecDeque, default, ops::Deref, sync::{ Arc, atomic::{AtomicBool, AtomicUsize, Ordering} }, time::{SystemTime, UNIX_EPOCH}};
 use nih_plug_egui::{EguiState, egui::{Align, Context, Layout, Ui}};
 use consts::PLUGIN_METADATA;
-
-const STRETCH_STRING_SOURCE: &str = "Stretch! ";
-const MAX_STRETCH_STRING_LENGTH: usize = 24;
-const MIN_BUFFER_SECONDS: f32 = 0.1;
-const MAX_BUFFER_SECONDS: f32 = 60.0;
+use crate::{interface::StretchInterface, params::StretchParams, runtime::StretchRuntime};
 
 pub struct Stretch {
     params: Arc<StretchParams>,
-    interface: Arc<StretchInterface>,
-    runtime: Arc<StretchRuntime>,
-}
-
-#[derive(Params)]
-pub struct StretchParams {
-    #[persist = "editor-state"] editor_state: Arc<EguiState>,
-    #[id = "stretch"]           stretch: BoolParam,
-    #[id = "speed"]             speed: FloatParam,
-    #[id = "variance"]          variance: FloatParam,
-    #[id = "window"]            window: FloatParam,
-    #[id = "pitch"]             pitch: FloatParam,
-    #[id = "buffer"]            buffer: FloatParam,
-    
-    sample_rate: AtomicF32,
-    buffer_size: AtomicUsize,
-    channels: AtomicUsize,
-    run_ms: AtomicF32,
-}
-
-pub struct StretchInterface { 
-    stretch_time: f32
-}
-
-pub struct StretchRuntime { }
-
-impl MlemParams for StretchParams {
-    fn sample_rate(&self) -> &AtomicF32 {
-        return &self.sample_rate;        
-    }
-
-    fn buffer_size(&self) -> &AtomicUsize {
-        return &self.buffer_size;
-    }
-
-    fn channels(&self) -> &AtomicUsize {
-        return &self.channels;
-    }
-
-    fn run_ms(&self) -> &AtomicF32 {
-        return &self.run_ms;
-    }
+    runtime: Runtime<StretchParams, StretchRuntime>
 }
 
 impl Default for Stretch {
     fn default() -> Self {
         let params = Arc::new(StretchParams::default());
-        let interface = Arc::new(StretchInterface::new());
-        let runtime = Arc::new(StretchRuntime::new());
+        let runtime = Runtime::new(None, params.clone(), StretchRuntime::new(params.clone()));
 
         let stretch = Self {
-            params: params.clone(),
-            runtime: runtime.clone(),
-            interface: interface.clone(),
+            params,
+            runtime
         };
 
         return stretch;
     }
 }
 
-impl Default for StretchParams {
-    fn default() -> Self {
-        Self {
-            editor_state: EguiState::from_size(PLUGIN_METADATA.window_width, PLUGIN_METADATA.window_height),
-            stretch: BoolParam::new("Stretch", false),
-            speed: FloatParam::new("Speed", 0.5, FloatRange::Linear { min: 0.0, max: 1.0 }),
-            variance: FloatParam::new("Variance", 0.01, FloatRange::Linear { min: 0.0, max: 1.0 }),
-            window: FloatParam::new("Window Size", 0.05, FloatRange::Linear { min: 0.01, max: 0.2 }),
-            pitch: FloatParam::new("Pitch", 0.0, FloatRange::Linear { min: -12.0, max: 12.0 }).with_unit("st"),
-            buffer: FloatParam::new("Buffer Size", 60.0, FloatRange::Linear { min: MIN_BUFFER_SECONDS, max: MAX_BUFFER_SECONDS }).with_unit("s"),
-
-            sample_rate: AtomicF32::new(0.0),
-            buffer_size: AtomicUsize::new(0),
-            channels: AtomicUsize::new(0),
-            run_ms: AtomicF32::new(0.0),
-        }
-    }
-}
-
-
-impl StretchInterface {
-    fn new() -> Self {
-        return Self {
-            stretch_time: 0.0
-        };
-    }
-
-    fn get_stretch_string(&self) -> String {
-        if self.params.stretch.value() {
-            self.stretch_time.store(self.stretch_time.load(Ordering::Relaxed) + self.params.speed.value() * 0.2, Ordering::Relaxed);
-        }
-        
-        let mut string = String::new();
-        for c in 0..MAX_STRETCH_STRING_LENGTH {
-            let char_i = (f32::floor(c as f32 * self.params.speed.value() + self.stretch_time.load(Ordering::Relaxed)) as usize) % STRETCH_STRING_SOURCE.len();
-            let char = STRETCH_STRING_SOURCE.chars().nth(char_i).expect("Out of bounds");
-
-            string.push(char);
-        }
-
-        return string;
-    }
-}
-
-impl MlemInterface for StretchInterface {
-    fn build(&self, ctx: &Context) { }
-    
-    fn update_bar(&self, ui: &mut Ui, ctx: &Context, setter: &ParamSetter) { }
-    
-    fn update_center(&self, ui: &mut Ui, ctx: &Context, setter: &ParamSetter) {
-        ui.horizontal(|ui| {
-            ui.add(param_toggle::ParamToggle::for_param(&self.params.stretch, setter, "Stretch", "Stretch"));
-            ui.add(param_drag_value::ParamDragValue::for_param(&self.params.speed, setter));
-        });
-        
-        ui.add_space(8.0);
-        
-        ui.horizontal(|ui| {
-            ui.add(param_drag_value::ParamDragValue::for_param(&self.params.variance, setter));
-            ui.add(param_drag_value::ParamDragValue::for_param(&self.params.window, setter));
-        });
-        
-        ui.horizontal(|ui| {
-            ui.add(param_drag_value::ParamDragValue::for_param(&self.params.pitch, setter).with_decimals(0));
-            ui.add_enabled_ui(!*&self.params.stretch.value(), |ui| {
-                ui.add(param_drag_value::ParamDragValue::for_param(&self.params.buffer, setter).with_decimals(0));
-            });
-        });
-        
-        ui.separator();
-        ui.horizontal(|ui| {
-            ui.add_enabled_ui(false, |ui| {
-                let stretch_string = &self.get_stretch_string();
-                ui.monospace(stretch_string);
-            });
-        });
-    }
-}
-
-impl StretchRuntime {
-    fn new() -> Self {
-        return Self { };
-    }
-}
-
-impl MlemRuntime for StretchRuntime {
-    fn init(&mut self, sample_rate: f32) {
-        
-    }
-    
-    fn reset(&mut self) {
-        
-    }
-    
-    fn run(&mut self, buffer: &mut Buffer, params: &StretchParams, transport: &Transport) {
-        
-    }
-}
-
 impl Stretch { }
 
-impl MlemPlugin for Stretch {
-    fn interface(&self) ->  Arc<dyn MlemInterface> {
-        return self.interface.clone();
-    }
-    
+impl MlemPlugin<StretchParams> for Stretch {
     fn metadata(&self) -> MlemMetadata {
         return consts::PLUGIN_METADATA;
     }
     
-    fn params(&self) ->  Arc<dyn MlemParams> {
+    fn params(&self) ->  Arc<StretchParams> {
         return self.params.clone();
-    }
-
-    fn runtime(&self) ->  Arc<dyn MlemRuntime> {
-        return self.runtime.clone();
     }
 }
 
@@ -227,7 +74,8 @@ impl Plugin for Stretch {
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
-        let interface = Interface::new(self.implementation.clone());
+        let interface = StretchInterface::new(self.params.clone());
+        let interface = Interface::new(self.params.clone(), interface, self.metadata());
         
         let editor_state = self.params.editor_state.clone();
         self.runtime.console = Some(interface.console.create_sender());
@@ -257,9 +105,7 @@ impl Plugin for Stretch {
         _aux: &mut AuxiliaryBuffers,
         context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
-        let params = self.params.clone();
-
-        self.runtime.run(buffer, &params, context.transport());
+        self.runtime.run(buffer, context.transport());
 
         return ProcessStatus::Normal;
     }

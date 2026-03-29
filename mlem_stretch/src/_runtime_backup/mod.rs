@@ -12,7 +12,6 @@ use mlem_base::runtime::stretch::Stretch;
 
 const MIN_SPEED: f32 = 0.001;
 
-// FIX artefacts at 1.0 speed.
 pub struct Runtime {
     pub console: Option<ConsoleSender>,
 

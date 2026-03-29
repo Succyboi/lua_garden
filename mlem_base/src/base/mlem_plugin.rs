@@ -3,9 +3,7 @@ use nih_plug::{editor::Editor, params::Params, plugin::Plugin, prelude::{AsyncEx
 
 use crate::base::{mlem_interface::MlemInterface, mlem_metadata::MlemMetadata, mlem_params::MlemParams, mlem_runtime::MlemRuntime};
 
-pub trait MlemPlugin: 'static + Send + Sync  {
+pub trait MlemPlugin<T: MlemParams>: 'static + Send + Sync {
     fn metadata(&self) -> MlemMetadata;
-    fn params(&self) ->  Arc<dyn MlemParams>;
-    fn interface(&self) ->  Arc<dyn MlemInterface>;
-    fn runtime(&self) ->  Arc<dyn MlemRuntime>;
+    fn params(&self) ->  Arc<T>;
 }

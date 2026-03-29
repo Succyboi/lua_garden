@@ -22,18 +22,22 @@ pub enum InterfaceCenterViewState {
     Plugin
 }
 
-pub struct Interface<T: MlemPlugin> {
+pub struct Interface<T: MlemParams, U: MlemInterface<T>> {
     pub console: ConsoleReceiver,
-    plugin: Arc<T>,
+    params: Arc<T>,
+    interface: U,
+    metadata: MlemMetadata,
 
     center_view: InterfaceCenterViewState
 }
 
-impl<T: MlemPlugin> Interface<T> {
-    pub fn new(plugin: Arc<T>) -> Interface<T> {
+impl<T: MlemParams, U: MlemInterface<T>> Interface<T, U> {
+    pub fn new(params: Arc<T>, interface: U, metadata: MlemMetadata) -> Interface<T, U> {
         return Self {
             console: ConsoleReceiver::new(),
-            plugin,
+            params,
+            interface,
+            metadata,
 
             center_view: InterfaceCenterViewState::Plugin
         };
@@ -216,15 +220,15 @@ impl<T: MlemPlugin> Interface<T> {
         return self.metadata().window_theme;
     }
 
-    fn metadata(&self) -> MlemMetadata {
-        return self.plugin.metadata();
+    fn metadata(&self) -> &MlemMetadata {
+        return &self.metadata;
     }
 
-    fn params(&self) -> Arc<dyn MlemParams> {
-        return self.plugin.params();
+    fn params(&self) -> Arc<T> {
+        return self.params.clone();
     }
 
-    fn interface(&self) -> Arc<dyn MlemInterface> {
-        return self.plugin.interface();
+    fn interface(&mut self) -> &mut impl MlemInterface<T> {
+        return &mut self.interface;
     }
 }
