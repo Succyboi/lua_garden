@@ -2,7 +2,7 @@ use mlem_base::base::mlem_metadata::MlemMetadata;
 use nih_plug::prelude::*;
 
 pub const PLUGIN_METADATA: MlemMetadata = MlemMetadata::new(
-    "\u{E628}",
+    "\u{E426}",
     env!("CARGO_PKG_NAME"),
     env!("CARGO_PKG_HOMEPAGE"),
     env!("CARGO_PKG_HOMEPAGE"),
@@ -14,13 +14,15 @@ pub const PLUGIN_METADATA: MlemMetadata = MlemMetadata::new(
     concat!(include_str!("../credits.txt"), "\n\n", include_str!("../../mlem_base/credits.txt")),
     "Mlem Records",
     "support@mlemrecords.com", 
-    "com.mlemrecords.mlem_meter", 
-    *b"meterMLEM       ", 
+    "com.mlemrecords.mlem_markov", 
+    *b"markovMLEM      ", 
     
     &[ClapFeature::AudioEffect, ClapFeature::Stereo], 
     &[Vst3SubCategory::Fx], 
 
-    256,
-    146,
+    160,
+    134,
     mlem_egui_themes::MLEM_DARK
 );
+
+pub const DEFAULT_DATA: &str = include_str!("../default_data.txt");

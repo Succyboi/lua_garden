@@ -3,3 +3,9 @@ name = "Mlem Meter"
 
 [mlem_data]
 name = "Mlem Data"
+
+[mlem_stretch]
+name = "Mlem Stretch"
+
+[mlem_markov]
+name = "Mlem Markov"

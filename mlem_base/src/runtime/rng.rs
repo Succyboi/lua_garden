@@ -13,6 +13,10 @@ pub trait Rng<T> {
         return range.start + (range.end - range.start) * self.next_f32();
     }
 
+    fn range_usize(&mut self, range: Range<usize>) -> usize {
+        return f32::floor(range.start as f32 + (range.end as f32 - range.start as f32) * self.next_f32()) as usize;
+    }
+
     fn now() -> u64 {
         let time = SystemTime::now();
         let since = time

@@ -18,7 +18,7 @@ pub const PLUGIN_METADATA: MlemMetadata = MlemMetadata::new(
     *b"stretchMLEM     ", 
     
     &[ClapFeature::AudioEffect, ClapFeature::Stereo], 
-    &[Vst3SubCategory::Fx, Vst3SubCategory::Tools], 
+    &[Vst3SubCategory::Fx], 
 
     160,
     134,
