@@ -20,9 +20,9 @@ pub const PLUGIN_METADATA: MlemMetadata = MlemMetadata::new(
     &[ClapFeature::AudioEffect, ClapFeature::Stereo], 
     &[Vst3SubCategory::Fx], 
 
-    160,
+    256,
     134,
-    mlem_egui_themes::MLEM_DARK
+    mlem_egui_themes::MLEM_LIGHT
 );
 
 pub const DEFAULT_DATA: &str = include_str!("../default_data.txt");

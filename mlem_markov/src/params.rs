@@ -1,8 +1,8 @@
-use std::sync::{Arc, atomic::AtomicUsize};
+use std::sync::{Arc, Mutex, atomic::AtomicUsize};
 use atomic_float::AtomicF32;
 use mlem_base::base::mlem_params::MlemParams;
 use nih_plug::{params::{BoolParam, FloatParam, IntParam, Params}, prelude::FloatRange};
-use nih_plug_egui::EguiState;
+use nih_plug_egui::{EguiState};
 use crate::consts::PLUGIN_METADATA;
 
 #[derive(Params)]
@@ -15,6 +15,8 @@ pub struct MarkovParams {
     buffer_size: AtomicUsize,
     channels: AtomicUsize,
     run_ms: AtomicF32,
+
+    pub buffer_preview: Mutex<Vec<String>>,
 }
 
 impl MlemParams for MarkovParams {
@@ -46,6 +48,8 @@ impl Default for MarkovParams {
             buffer_size: AtomicUsize::new(0),
             channels: AtomicUsize::new(0),
             run_ms: AtomicF32::new(0.0),
+
+            buffer_preview: Mutex::from(Vec::new())
         }
     }
 }

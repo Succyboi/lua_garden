@@ -39,15 +39,22 @@ impl MarkovRuntime {
 }
 
 impl MarkovRuntime {
-    fn train(&mut self, string: String) {
+    fn retrain(&mut self, string: String) {
+        self.markov = Chain::new();
+        let mut buffer_preview = self.params.buffer_preview.lock().unwrap();
+        buffer_preview.clear();
+
         for segment in string.split_whitespace() {
             self.markov.feed_str(segment);
+            buffer_preview.push(String::from(segment));
         }
     }
 
     fn generate(&mut self) {
         for i in 0..GENERATE_CHUNK_SIZE {
             for u in self.markov.generate_str().chars() {
+                if u == ' ' { continue; }
+
                 self.buffer.push(u as u8);
             }
         }
@@ -75,14 +82,13 @@ impl MlemRuntime<MarkovParams> for MarkovRuntime {
     
     fn reset(&mut self) {
         self.buffer.clear();
-        self.markov = Chain::new();
         let mut words = String::new();
         for i in 0..self.params.word_count.value() {
             words.push_str(&self.words[self.rng.range_usize(0..self.words.len()) as usize]);
             words.push(' ');
         }
     
-        self.train(words);
+        self.retrain(words);
     }
     
     fn run(&mut self, buffer: &mut Buffer, _transport: &Transport) {
