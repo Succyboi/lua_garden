@@ -5,6 +5,7 @@ use nih_plug::{buffer::{self, Buffer}, prelude::Transport};
 use crate::{consts::DEFAULT_DATA, params::MarkovParams};
 
 const GENERATE_CHUNK_SIZE: usize = 16;
+const MIN_WORDS: usize = 1;
 
 pub struct MarkovRuntime { 
     params: Arc<MarkovParams>,
@@ -15,9 +16,11 @@ pub struct MarkovRuntime {
     markov: Chain<String>,
     buffer: Vec<u8>,
 
-    last_word_count: i32,
+    word_count: usize,
     curr_byte: u8,
     bit_pos: usize,
+    timer: usize,
+    period: f32
 }
 
 impl MarkovRuntime {
@@ -31,9 +34,11 @@ impl MarkovRuntime {
             markov: Chain::new(),
             buffer: Vec::new(),
 
-            last_word_count: 0,
+            word_count: 0,
             curr_byte: 0,
-            bit_pos: 0
+            bit_pos: 0,
+            timer: 0,
+            period: 0.0
         };
     }
 }
@@ -81,9 +86,12 @@ impl MlemRuntime<MarkovParams> for MarkovRuntime {
     }
     
     fn reset(&mut self) {
+        self.timer = 0;
+        self.period = self.rng.range_f32(0.0..1.0);
+        self.word_count = self.rng.range_usize(MIN_WORDS..(self.params.words.value() as usize));
         self.buffer.clear();
         let mut words = String::new();
-        for i in 0..self.params.word_count.value() {
+        for i in 0..self.word_count {
             words.push_str(&self.words[self.rng.range_usize(0..self.words.len()) as usize]);
             words.push(' ');
         }
@@ -92,12 +100,12 @@ impl MlemRuntime<MarkovParams> for MarkovRuntime {
     }
     
     fn run(&mut self, buffer: &mut Buffer, _transport: &Transport) {
-        if self.params.word_count.value() != self.last_word_count {
-            self.reset();
-            self.last_word_count = self.params.word_count.value();
-        }
-
         for channel_samples in buffer.iter_samples() {
+            self.timer += 1;
+            if self.timer as f32 / self.sample_rate() as f32 > (self.period * self.params.period.value()) {
+                self.reset();
+            }
+
             for sample in channel_samples {
                 if self.bit_pos >= 8 {
                     self.bit_pos = 0;

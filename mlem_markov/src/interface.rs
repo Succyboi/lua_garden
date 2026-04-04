@@ -34,7 +34,8 @@ impl MlemInterface<MarkovParams> for StretchInterface {
     
     fn update_center(&mut self, ui: &mut Ui, _ctx: &Context, setter: &ParamSetter) { 
         ui.horizontal(|ui| {
-            ui.add(ParamDragValue::for_param(&self.params.word_count, setter));
+            ui.add(ParamDragValue::for_param(&self.params.words, setter));
+            ui.add(ParamDragValue::for_param(&self.params.period, setter));
         });
 
         ui.horizontal(|ui| {

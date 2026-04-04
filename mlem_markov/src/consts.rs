@@ -22,7 +22,7 @@ pub const PLUGIN_METADATA: MlemMetadata = MlemMetadata::new(
 
     256,
     134,
-    mlem_egui_themes::MLEM_LIGHT
+    mlem_egui_themes::MLEM_DARK
 );
 
 pub const DEFAULT_DATA: &str = include_str!("../default_data.txt");
