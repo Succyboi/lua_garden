@@ -5,11 +5,11 @@ use nih_plug_egui::egui::{Context, Ui};
 
 use crate::params::MarkovParams;
 
-pub struct StretchInterface {
+pub struct MarkovInterface {
     params: Arc<MarkovParams>
 }
 
-impl StretchInterface {
+impl MarkovInterface {
     pub fn new(params: Arc<MarkovParams>) -> Self {
         return Self {
             params
@@ -17,7 +17,7 @@ impl StretchInterface {
     }
 }
 
-impl MlemInterface<MarkovParams> for StretchInterface {
+impl MlemInterface<MarkovParams> for MarkovInterface {
     fn params(&self) ->  Arc<MarkovParams> {
         return self.params.clone();
     }

@@ -8,17 +8,17 @@ use mlem_base::{ interface::{ Interface } };
 use nih_plug::prelude::*;
 use std::{sync::{ Arc }};
 use consts::PLUGIN_METADATA;
-use crate::{interface::MarkovInterface, params::MarkovParams, runtime::MarkovRuntime};
+use crate::{interface::TidbitInterface, params::TidbitParams, runtime::TidbitRuntime};
 
-pub struct Markov {
-    params: Arc<MarkovParams>,
-    runtime: Runtime<MarkovParams, MarkovRuntime>
+pub struct Tidbit {
+    params: Arc<TidbitParams>,
+    runtime: Runtime<TidbitParams, TidbitRuntime>
 }
 
-impl Default for Markov {
+impl Default for Tidbit {
     fn default() -> Self {
-        let params = Arc::new(MarkovParams::default());
-        let runtime = Runtime::new(params.clone(), MarkovRuntime::new(params.clone()));
+        let params = Arc::new(TidbitParams::default());
+        let runtime = Runtime::new(params.clone(), TidbitRuntime::new(params.clone()));
 
         let stretch = Self {
             params,
@@ -29,19 +29,19 @@ impl Default for Markov {
     }
 }
 
-impl Markov { }
+impl Tidbit { }
 
-impl MlemPlugin<MarkovParams> for Markov {
+impl MlemPlugin<TidbitParams> for Tidbit {
     fn metadata(&self) -> MlemMetadata {
         return consts::PLUGIN_METADATA;
     }
     
-    fn params(&self) ->  Arc<MarkovParams> {
+    fn params(&self) ->  Arc<TidbitParams> {
         return self.params.clone();
     }
 }
 
-impl Plugin for Markov {
+impl Plugin for Tidbit {
     const NAME: &'static str = PLUGIN_METADATA.name;
     const VENDOR: &'static str = PLUGIN_METADATA.vendor;
     const URL: &'static str = PLUGIN_METADATA.homepage_url;
@@ -71,7 +71,7 @@ impl Plugin for Markov {
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
-        let interface = MarkovInterface::new(self.params.clone());
+        let interface = TidbitInterface::new(self.params.clone());
         let interface = Interface::new(self.params.clone(), interface, self.metadata());
         
         let editor_state = self.params.editor_state.clone();
@@ -107,7 +107,7 @@ impl Plugin for Markov {
     }
 }
 
-impl ClapPlugin for Markov {
+impl ClapPlugin for Tidbit {
     const CLAP_ID: &'static str = PLUGIN_METADATA.identifier;
     const CLAP_DESCRIPTION: Option<&'static str> = Some(PLUGIN_METADATA.description);
     const CLAP_MANUAL_URL: Option<&'static str> = Some(PLUGIN_METADATA.homepage_url);
@@ -116,11 +116,11 @@ impl ClapPlugin for Markov {
     const CLAP_FEATURES: &'static [ClapFeature] = PLUGIN_METADATA.clap_features;
 }
 
-impl Vst3Plugin for Markov {
+impl Vst3Plugin for Tidbit {
     const VST3_CLASS_ID: [u8; 16] = PLUGIN_METADATA.class_identifier;
 
     const VST3_SUBCATEGORIES: &'static [Vst3SubCategory] = PLUGIN_METADATA.vst3_subcategories;
 }
 
-nih_export_clap!(Markov);
-nih_export_vst3!(Markov);
+nih_export_clap!(Tidbit);
+nih_export_vst3!(Tidbit);

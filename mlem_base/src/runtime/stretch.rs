@@ -93,8 +93,9 @@ impl Stretch {
 
         let window_end = self.window_start + (self.window_end - self.window_start) /* * pitch <- cool length correction that causes clicking*/;
         if self.window_start + self.window_offset > window_end {
-            self.window_start = utils::previous_zero_crossing(&self.buffer, usize::MAX, f32::floor(self.window_pos - self.window_len() * f32::max(pitch - 1.0, 0.0)) as usize, self.default_window_len() as usize) as f32;
+            self.window_start = f32::floor(self.window_pos - self.window_len() * f32::max(pitch - 1.0, 0.0));
             self.window_end = utils::nearest_zero_crossing(&self.buffer, usize::MAX, f32::floor(self.window_start + self.window_len() * pitch) as usize, self.default_window_len() as usize) as f32;
+            self.window_start = utils::previous_zero_crossing(&self.buffer, usize::MAX, self.window_start as usize, self.default_window_len() as usize) as f32;
             self.window_offset = 0.0;
         }
 

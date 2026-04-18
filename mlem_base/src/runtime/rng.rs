@@ -1,4 +1,4 @@
-use std::{ops::Range, time::{SystemTime, UNIX_EPOCH}};
+use std::{f32::consts::E, ops::Range, time::{SystemTime, UNIX_EPOCH}};
 
 pub trait Rng<T> {
     fn new() -> T;

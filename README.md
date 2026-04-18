@@ -22,7 +22,8 @@ Published builds contain CLAP, VST3 and Standalone versions.
     > Stretches input in a rudimentary akai-rack-unit-sampler style fashion.
     > 
     > ![mlem_stretch](mlem_stretch/preview.png)
-- [lua_garden_plug](lua_garden_plug) - Total WIP.
+- [mlem_markov](mlem_markov) 0.1.0 - [Very WIP] A noise instrument.
+- [lua_garden_plug](lua_garden_plug) - [Total WIP].
 - mlem_dynrange - TBM - A manual linear dynamic range remapper. 
 
 ## Building

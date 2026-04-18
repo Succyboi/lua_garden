@@ -1,5 +1,6 @@
 use std::{collections::VecDeque, ops::Index};
 
+#[derive(Clone)]
 pub struct RecBuffer {
     sample_rate: usize,
     max_length: f32,
@@ -87,6 +88,10 @@ impl RecBuffer {
             output[i] = self.pop();
         }
     }
+    
+    pub fn full(&self) -> bool {
+        return self.buffer.len() >= self.max_len();
+    }
 
     fn max_len(&self) -> usize {
         return f32::floor(self.sample_rate as f32 * self.max_length) as usize;
@@ -94,10 +99,6 @@ impl RecBuffer {
 
     fn refit(&mut self) {
         self.buffer.truncate(self.max_len());
-    }
-
-    fn full(&self) -> bool {
-        return self.buffer.len() >= self.max_len();
     }
 }
 

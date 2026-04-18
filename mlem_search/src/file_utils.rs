@@ -1,0 +1,25 @@
+use std::{fs, path::PathBuf};
+
+use directories::ProjectDirs;
+
+pub fn data_directory() -> Result<PathBuf, String> {
+    let project_dirs = ProjectDirs::from("com", "mlem_records", env!("CARGO_PKG_NAME"));
+    if project_dirs.is_none() {
+        return Err("Failed to create directory for vector database".to_string());
+    }
+    let project_dirs = project_dirs.unwrap();
+    let data_local_dir = project_dirs.data_local_dir();
+
+    match fs::exists(data_local_dir) {
+        Ok(i) => {
+            if !i {
+                fs::create_dir(data_local_dir).map_err(|e| e.to_string())?;
+            }
+        },
+        Err(e) => {
+            fs::create_dir(data_local_dir).map_err(|e| e.to_string())?;
+        }
+    }
+
+    Ok(data_local_dir.to_path_buf())
+}

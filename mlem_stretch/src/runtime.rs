@@ -77,7 +77,7 @@ impl MlemRuntime<StretchParams> for StretchRuntime {
     }
     
     fn run(&mut self, buffer: &mut Buffer, _transport: &Transport) {
-        let active = self.params.stretch.value();
+        let active = self.params.stretch.value() && (self.params.speed.value() < 1.0 || self.params.pitch.value() != 0.0);
         let reset = !active && self.last_active;
         self.last_active = active;
 

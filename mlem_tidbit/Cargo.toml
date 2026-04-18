@@ -1,12 +1,12 @@
 [package]
-name = "mlem_stretch"
+name = "mlem_tidbit"
 authors = [
     "Puk Bruinsma / DJ ZITwerK <puk@mlemrecords.com>"
     ]
 homepage = "https://mlemrecords.com"
-version = "0.1.1"
+version = "0.1.0"
 edition = "2021"
-description = "A time stretcher."
+description = "A random memory based delay."
 license-file = "LICENSE"
 
 [lib]

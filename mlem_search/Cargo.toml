@@ -1,0 +1,31 @@
+[package]
+name = "mlem_search"
+authors = [
+    "Puk Bruinsma / DJ ZITwerK <puk@mlemrecords.com>"
+    ]
+homepage = "https://mlemrecords.com"
+version = "0.1.1"
+edition = "2021"
+description = "Performs audio similarity search."
+license = "GPL-3.0"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+path = "src/lib.rs"
+
+[dependencies]
+walkdir = "2"
+rodio = "0.18.1"
+rubato = "0.15.0"
+threadpool = "1.8.1"
+num_cpus = "1.16.0"
+arroy = "0.4.0"
+heed = "0.20.2"
+rand = "0.8.5"
+directories = "5.0.1"
+rusqlite = { version = "0.31.0", features = ["bundled"] }
+serde = "1.0.203"
+bincode = "1.3.3"
+clap = { version = "4.5.17", features = ["derive"] }
+mfcc = "0.1"
+mlem_base = { path = "../mlem_base" }

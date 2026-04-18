@@ -7,5 +7,7 @@ members = [
     "mlem_meter",
     "mlem_data",
     "mlem_stretch",
-    "mlem_markov"
+    "mlem_markov",
+    "mlem_tidbit",
+    "mlem_search"
 ]
