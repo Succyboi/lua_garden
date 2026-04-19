@@ -4,7 +4,7 @@ use rubato::{SincFixedIn, SincInterpolationParameters, SincInterpolationType};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
-use std::sync::mpsc;
+use std::sync::mpsc::{self, Receiver, Sender};
 use threadpool::ThreadPool;
 use walkdir::WalkDir;
 use mfcc::mfcc::Transform;
@@ -12,8 +12,53 @@ use mfcc::mfcc::Transform;
 use crate::{FEATURE_DIMENSIONS, FEATURE_THREADS, FEATURE_SAMPLE_RATE};
 use crate::feature::Feature;
 
-fn get_audio_files(root_dir: &str) -> Vec<String> {
-    let path = PathBuf::from(root_dir);
+pub struct FeatureExtractor {
+    thread_pool: ThreadPool,
+    sender: Sender<Feature>,
+    receiver: Receiver<Feature>
+}
+
+impl FeatureExtractor {
+    pub fn new(threads: usize) -> Self {
+        let (sender, receiver) = mpsc::channel::<Feature>();
+
+        return Self {
+            thread_pool: ThreadPool::new(threads),
+            sender,
+            receiver
+        }
+    }
+
+    pub fn working(&self) -> bool {
+        return self.thread_pool.active_count() > 0 || self.thread_pool.queued_count() > 0;
+    }
+
+    pub fn extract_feature(&self, path: &String) {
+        let f = path.to_string();
+        let sender = self.sender.clone();
+        self.thread_pool.execute(move || {
+            if let Ok(mfcc) = decode_and_calculate_mfcc(&f, FEATURE_SAMPLE_RATE) {
+                sender.send(Feature::new(mfcc, f, None)).unwrap();
+            } else {
+                println!("Failed to extract features for {f}");
+            }
+        });
+    }
+
+    pub fn receive_features(&self) -> Option<Vec<Feature>> {
+        let mut features = Vec::new();
+        
+        while let Ok(feature) = self.receiver.try_recv() {
+            features.push(feature);
+        }
+        
+        if features.len() <= 0 { return None; }
+        return Some(features);
+    }
+}
+
+pub fn get_audio_files_form_dir(dir_path: &str) -> Vec<String> {
+    let path = PathBuf::from(dir_path);
 
     let supported_extensions = ["wav", "mp3"];
     WalkDir::new(path)
@@ -28,60 +73,6 @@ fn get_audio_files(root_dir: &str) -> Vec<String> {
         })
         .map(|path| path.into_os_string().into_string().unwrap())
         .collect()
-}
-
-pub enum RunMode {
-    SingleThreaded,
-    Parallel,
-}
-
-pub fn extract_features(run_mode: RunMode, asset_dir: &str, progress_callback: impl Fn(f32)) -> Result<Vec<Feature>, String> {
-    let files = get_audio_files(asset_dir);
-    let num_files = files.len();
-    if num_files == 0 {
-        return Err(format!("No files found in {asset_dir}"));
-    }
-
-    let mut features: Vec<Feature> = Vec::with_capacity(files.len());
-
-    match run_mode {
-        RunMode::SingleThreaded => {
-            for file in files.iter() {
-                if let Ok(mfcc) = decode_and_calculate_mfcc(file, FEATURE_SAMPLE_RATE) {
-                    features.push(Feature::new(mfcc, file.to_string(), None));
-                }
-            }
-        }
-        RunMode::Parallel => {
-            println!("Running with {FEATURE_THREADS} threads");
-            let thread_pool = ThreadPool::new(FEATURE_THREADS);
-
-            let (sender, receiver) = mpsc::channel::<Feature>();
-
-            for file in files.iter() {
-                let f = file.to_string();
-                let sender = sender.clone();
-                thread_pool.execute(move || {
-                    if let Ok(mfcc) = decode_and_calculate_mfcc(&f, FEATURE_SAMPLE_RATE) {
-                        sender.send(Feature::new(mfcc, f, None)).unwrap();
-                    } else {
-                        println!("Failed to extract features for {f}");
-                    }
-                });
-            }
-
-            let mut progress = 0.0;
-            let progress_increment = 1.0 / files.len() as f32;
-            while thread_pool.active_count() > 0 || thread_pool.queued_count() > 0 {
-                if let Ok(feature) = receiver.try_recv() {
-                    features.push(feature);
-                    progress += progress_increment;
-                    progress_callback(progress);
-                }
-            }
-        }
-    }
-    Ok(features)
 }
 
 fn decode_and_calculate_mfcc(path: &str, output_sample_rate: usize) -> Result<Vec<f32>, String> {

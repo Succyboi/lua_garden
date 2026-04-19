@@ -5,12 +5,12 @@ use rand::rngs::StdRng;
 use rand::SeedableRng;
 
 use crate::feature::Feature;
-use crate::{FEATURE_DIMENSIONS, MAX_DB_SIZE, file_utils};
+use crate::{FEATURE_DIMENSIONS, MAX_DB_SIZE};
 use arroy::distances::Angular;
 use arroy::{Database as ArroyDatabase, Reader, Writer};
 
 unsafe fn create_env() -> Result<Env, String> {
-    let dir = file_utils::data_directory()?;
+    let dir = std::env::current_dir().map_err(|e| e.to_string())?;
     let env = unsafe {
         heed::EnvOpenOptions::new()
             .map_size(MAX_DB_SIZE)
@@ -32,6 +32,7 @@ impl VectorDatabase {
         let db: ArroyDatabase<Angular> = env
             .create_database(&mut write_txn, None)
             .map_err(|e| e.to_string())?;
+        db.clear(&mut write_txn).map_err(|e| e.to_string())?;
         let writer = Writer::<Angular>::new(db, 0, FEATURE_DIMENSIONS);
         let mut rng = StdRng::from_entropy();
         // Note: we still need to call build() after loading the db from disk. Even if
@@ -43,21 +44,17 @@ impl VectorDatabase {
         Ok(VectorDatabase { db })
     }
 
-    /// Adds features to the vector db and saves it on disk.
-    pub fn add(&self, features: &[Feature]) -> Result<(), String> {
+    pub fn add(&self, feature: &Feature) -> Result<(), String> {
         let env = unsafe { create_env()? };
         let mut write_txn = env.write_txn().map_err(|e| e.to_string())?;
 
         let index = 0;
-        // Build index
         let writer = Writer::<Angular>::new(self.db, index, FEATURE_DIMENSIONS);
-        for feature in features.iter() {
-            let id = feature.id().unwrap();
-            // Write to the arroy vector db using the id from the sqlite table
-            writer
-                .add_item(&mut write_txn, id as u32, feature.vector())
-                .map_err(|e| e.to_string())?;
-        }
+        let id = feature.id().unwrap();
+        // Write to the arroy vector db using the id from the sqlite table
+        writer
+            .add_item(&mut write_txn, id as u32, feature.vector())
+            .map_err(|e| e.to_string())?;
 
         // Build index
         let mut rng = StdRng::from_entropy();
@@ -72,7 +69,7 @@ impl VectorDatabase {
     }
 
     /// Returns a vector of file ids to the top k similar results
-    pub fn find_similar(&self, id: u32, num_results: usize) -> Result<Vec<u32>, String> {
+    pub fn find_similar(&self, id: u32, num_results: usize) -> Result<Vec<(u32, f32)>, String> {
         let env = unsafe { create_env()? };
         let rtxn = env.read_txn().map_err(|e| e.to_string())?;
         let index = 0;
@@ -88,8 +85,8 @@ impl VectorDatabase {
             .map_err(|e| e.to_string())?
             .ok_or("Unexpected similarity search error".to_string())?
             .iter()
-            .map(|result| result.0)
-            .filter(|i| &id != i)
+            .map(|result| (result.0, result.1))
+            .filter(|i| id != i.0)
             .collect();
         Ok(search_results)
     }
