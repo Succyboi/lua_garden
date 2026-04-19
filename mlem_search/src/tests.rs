@@ -5,7 +5,7 @@ mod tests {
 
     #[test]
     fn extract_features() {
-        let root_paths = feature_extractor::get_audio_files_form_dir("./test_data");
+        let root_paths = feature_extractor::get_audio_files_form_dir("static/default");
         let feature_extractor = FeatureExtractor::new(FEATURE_THREADS);
         let mut metadata_database = MetadataDatabase::new();
 
@@ -28,7 +28,7 @@ mod tests {
 
     #[test]
     fn find_nearest() {
-        let root_paths = feature_extractor::get_audio_files_form_dir("./test_data");
+        let root_paths = feature_extractor::get_audio_files_form_dir("static/default");
         let feature_extractor = FeatureExtractor::new(FEATURE_THREADS);
         let mut metadata_db = MetadataDatabase::new();
         let vector_db = vector_db::VectorDatabase::new().expect("Failed to create vector database");

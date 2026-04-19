@@ -1,27 +1,27 @@
-use std::time::{SystemTime, UNIX_EPOCH};
+use serde::{Serialize, Serializer, ser::SerializeStruct};
 
 #[derive(Clone)]
 pub struct Feature {
-    feature_vector: Vec<f32>,
-    source_file: String,
+    vector: Vec<f32>,
+    path: String,
     id: Option<u32>,
 }
 
 impl Feature {
-    pub fn new(feature_vector: Vec<f32>, source_file: String, id: Option<u32>) -> Self {
+    pub fn new(vector: Vec<f32>, path: String, id: Option<u32>) -> Self {
         Self {
-            feature_vector,
-            source_file,
+            vector,
+            path,
             id,
         }
     }
 
     pub fn vector(&self) -> &[f32] {
-        &self.feature_vector
+        &self.vector
     }
 
     pub fn path(&self) -> &str {
-        &self.source_file
+        &self.path
     }
 
     pub fn id(&self) -> &Option<u32> {
@@ -39,5 +39,14 @@ impl Feature {
 
     pub fn set_id(&mut self, id: u32) {
         self.id = Some(id);
+    }
+}
+
+impl Serialize for Feature {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        let mut state = serializer.serialize_struct("Feature", 2)?;
+        state.serialize_field("id", &self.id.unwrap())?;
+        state.serialize_field("path", &self.path)?;
+        state.end()
     }
 }

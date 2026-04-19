@@ -29,6 +29,10 @@ impl MetadataDatabase {
         return Some(&self.features[&id]);
     }
 
+    pub fn len(&self) -> usize {
+        return self.features.len();
+    }
+
     pub fn first(&self) -> Option<&Feature> {
         if let Some(feature) = self.features.first() {
             return Some(feature.1);

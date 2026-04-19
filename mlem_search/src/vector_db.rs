@@ -81,7 +81,7 @@ impl VectorDatabase {
 
         // Similar searching can be achieved by requesting the nearest neighbors of a given item.
         let search_results = reader
-            .nns_by_item(&rtxn, id, num_results, search_k, None)
+            .nns_by_item(&rtxn, id, num_results + 1, search_k, None)
             .map_err(|e| e.to_string())?
             .ok_or("Unexpected similarity search error".to_string())?
             .iter()

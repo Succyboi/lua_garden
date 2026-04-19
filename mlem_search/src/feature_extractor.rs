@@ -9,7 +9,7 @@ use threadpool::ThreadPool;
 use walkdir::WalkDir;
 use mfcc::mfcc::Transform;
 
-use crate::{FEATURE_DIMENSIONS, FEATURE_THREADS, FEATURE_SAMPLE_RATE};
+use crate::{FEATURE_DIMENSIONS, FEATURE_SAMPLE_RATE};
 use crate::feature::Feature;
 
 pub struct FeatureExtractor {
