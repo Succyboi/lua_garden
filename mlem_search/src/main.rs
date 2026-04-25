@@ -9,37 +9,62 @@ mod appstate;
 mod get_endpoints;
 mod post_endpoints;
 
+use env_logger::Env;
+use log::{ info, warn, error };
 use std::{sync::Mutex, time::SystemTime};
 use actix_files::Files;
-use actix_web::{App, HttpResponse, HttpServer, Responder, get, web::{self, Data, post}};
-use crate::{appstate::AppState, get_endpoints::{random, similar, state}, post_endpoints::upload};
+use actix_multipart::form::tempfile::TempFileConfig;
+use actix_web::{App, HttpResponse, HttpServer, Responder, middleware, web::{self, Data, get, post, resource}};
+use crate::{appstate::AppState, get_endpoints::{all, feature_id, random, similar, state, web}, post_endpoints::upload};
 
 const API_PORT: usize = 16769;
-const FEATURE_THREADS: usize = 4;
+const API_WORKERS: usize = 16;
+const FEATURE_THREADS: usize = 16;
 const FEATURE_DIMENSIONS: usize = 60;
 const FEATURE_SAMPLE_RATE: usize = 22050;
 const FILES_PATH: &str = "static";
 const WEB_PATH: &str = "web";
-const MAX_DB_SIZE: usize = 2 * 1024 * 1024 * 1024;
+const UPLOADS_PATH: &str = "static/uploads";
+const MAX_DB_SIZE: usize = 1024 * 1024 * 1024 * 1024;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let app_state = Data::new(Mutex::new(AppState::new()));
 
-    println!("Starting server at http://127.0.0.1:{}", API_PORT);
+    env_logger::init_from_env(Env::default().default_filter_or("info"));
+
+    info!("Starting server at http://127.0.0.1:{}", API_PORT);
     HttpServer::new(move || {
         App::new()
+            .wrap(middleware::Logger::default())
             .app_data(app_state.clone())
+            .app_data(TempFileConfig::default().directory(UPLOADS_PATH))
             .service(Files::new("/static", FILES_PATH))
-            .service(Files::new("/web", WEB_PATH).show_files_listing())
-
+            
             .service(state)
+            .service(all)
             .service(random)
             .service(similar)
+            .service(feature_id)
             
-            .service(upload)
+            .service(Files::new("/web", WEB_PATH))
+            .service(resource("/upload")
+                .route(get().to(web))
+                .route(post().to(upload)))
     })
     .bind(format!("127.0.0.1:{}", API_PORT))?
+    .workers(API_WORKERS)
     .run()
     .await
 }
+
+// TODO
+// - Figure out why certain uploads fail
+// - Proper web interface
+// - Limiting: File sizes, audio duration, upload rates, file exist checks
+// - Max database enforcement
+// - Reporting system
+// - Database implementation
+// - Optimization to prevent updating app state on request threads
+// - String search for sample names?
+// - Download credits based on uploads?

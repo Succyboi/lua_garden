@@ -34,7 +34,7 @@ impl Feature {
             None => &u32::default()
         };
 
-        return format!("{:02X?}", id);
+        return format!("{}", id);
     }
 
     pub fn set_id(&mut self, id: u32) {

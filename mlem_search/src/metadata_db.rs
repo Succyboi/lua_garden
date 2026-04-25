@@ -17,16 +17,22 @@ impl MetadataDatabase {
     }
 
     pub fn add(&mut self, feature: &mut Feature) {
-        let id = self.next_id();
-        feature.set_id(id);
+        if feature.id().is_none() {
+            let id = self.next_id();
+            feature.set_id(id);
+        }
 
-        self.features.insert(id, feature.clone());
+        self.features.insert(feature.id().expect("No ID"), feature.clone());
     }
 
     pub fn get(&self, id: u32) -> Option<&Feature> {
         if !self.features.contains_key(&id) { return None; }
 
         return Some(&self.features[&id]);
+    }
+
+    pub fn values(&self) -> Vec<&Feature> {
+        return self.features.values().collect();
     }
 
     pub fn len(&self) -> usize {
@@ -60,7 +66,7 @@ impl MetadataDatabase {
         return None;
     }
 
-    fn next_id(&mut self) -> u32  {
+    pub fn next_id(&mut self) -> u32  {
         let mut next = self.rng.next_u32();
         
         while self.features.contains_key(&next) {

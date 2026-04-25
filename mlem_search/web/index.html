@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html>
     <head>
-
+        <script type="text/javascript" src="force-graph-1.51.4.js"></script>
+        <style> body { margin: 0; } </style> <!-- Add Mlem style later -->
     </head>
     <body>
-        <form target="/upload" method="post" enctype="multipart/form-data">
-            <input type="file" multiple name="file"/>
-            <button type="submit">Submit</button>
-        </form>
+        <audio id="release-audio" preload="auto">
+            <source id="audio-source"></source>
+        </audio>
+        <div id="graph"></div>
+        <script type="text/javascript" src="app.js"></script>
     </body>
 </html>

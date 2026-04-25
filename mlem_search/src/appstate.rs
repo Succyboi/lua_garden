@@ -1,4 +1,6 @@
-use crate::{FEATURE_THREADS, feature_extractor::{self, FeatureExtractor}, metadata_db::MetadataDatabase, vector_db::VectorDatabase};
+use log::{error, info};
+
+use crate::{FEATURE_THREADS, FILES_PATH, feature_extractor::{self, FeatureExtractor}, metadata_db::MetadataDatabase, vector_db::VectorDatabase};
 
 pub struct AppState {
     pub feature_extractor: FeatureExtractor,
@@ -8,15 +10,16 @@ pub struct AppState {
 
 impl AppState {
     pub fn new() -> Self {
-        let new = Self {
+        let mut new = Self {
             feature_extractor: FeatureExtractor::new(FEATURE_THREADS),
             metadata_db: MetadataDatabase::new(),
             vector_db: VectorDatabase::new().expect("Couldn't create vector database")
         };
 
-        let default_paths = feature_extractor::get_audio_files_form_dir("static/default");
+        let default_paths = feature_extractor::get_audio_files_form_dir(FILES_PATH);
         for path in default_paths {
-            new.feature_extractor.extract_feature(&path);
+            let id = new.metadata_db.next_id();
+            new.feature_extractor.extract_feature(&path, Some(id));
         }
 
         return new; 
@@ -26,11 +29,12 @@ impl AppState {
         if let Some(features) = self.feature_extractor.receive_features() {
             for mut feature in features {
                 self.metadata_db.add(&mut feature);
-                let _ = self.vector_db.add(&feature);
-
-                println!("Extracted feature {path} ({id})", 
-                    path = feature.path(),
-                    id = feature.id_string());
+                match self.vector_db.add(&feature){
+                    Ok(_) => (),
+                    Err(e) => {
+                        error!("Couldn't add feature to vector database: {}", e);
+                    }
+                }
             }
         }
     }

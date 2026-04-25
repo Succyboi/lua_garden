@@ -1,3 +1,4 @@
+use log::{error, info};
 use rodio::{source::Source, Decoder};
 use rubato::Resampler;
 use rubato::{SincFixedIn, SincInterpolationParameters, SincInterpolationType};
@@ -5,6 +6,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
+use std::time::Instant;
 use threadpool::ThreadPool;
 use walkdir::WalkDir;
 use mfcc::mfcc::Transform;
@@ -33,14 +35,22 @@ impl FeatureExtractor {
         return self.thread_pool.active_count() > 0 || self.thread_pool.queued_count() > 0;
     }
 
-    pub fn extract_feature(&self, path: &String) {
-        let f = path.to_string();
+    pub fn extract_feature(&self, path: &String, id: Option<u32>) {
+        let path = path.to_string();
         let sender = self.sender.clone();
+        
         self.thread_pool.execute(move || {
-            if let Ok(mfcc) = decode_and_calculate_mfcc(&f, FEATURE_SAMPLE_RATE) {
-                sender.send(Feature::new(mfcc, f, None)).unwrap();
+            let now = Instant::now();
+            if let Ok(mfcc) = decode_and_calculate_mfcc(&path, FEATURE_SAMPLE_RATE) {
+                let feature = Feature::new(mfcc, path, id);
+                
+                info!("Extracted feature {path} ({id}) in {time}ms", 
+                    path = feature.path(),
+                    id = feature.id_string(),
+                    time = now.elapsed().as_millis());
+                sender.send(feature).unwrap();
             } else {
-                println!("Failed to extract features for {f}");
+                error!("Failed to extract features for {path}");
             }
         });
     }
@@ -60,7 +70,7 @@ impl FeatureExtractor {
 pub fn get_audio_files_form_dir(dir_path: &str) -> Vec<String> {
     let path = PathBuf::from(dir_path);
 
-    let supported_extensions = ["wav", "mp3"];
+    let supported_extensions = ["wav", "mp3", "flac", "ogg"];
     WalkDir::new(path)
         .into_iter()
         .filter_map(|d| d.ok())
@@ -76,14 +86,21 @@ pub fn get_audio_files_form_dir(dir_path: &str) -> Vec<String> {
 }
 
 fn decode_and_calculate_mfcc(path: &str, output_sample_rate: usize) -> Result<Vec<f32>, String> {
-    let mut decoded = decode_and_resample_file(path, output_sample_rate).unwrap();
-    let mfcc = calculate_mfcc(&mut decoded, 22050);
-    match mfcc {
-        Ok(mfcc) => {
-            return Ok(mfcc);
+    match decode_and_resample_file(path, output_sample_rate) {
+        Ok(mut decoded) => {
+            let mfcc = calculate_mfcc(&mut decoded, 22050);
+            match mfcc {
+                Ok(mfcc) => {
+                    return Ok(mfcc);
+                }
+                Err(e) => {
+                    error!("Failed to calculate MFFC: {}", e);
+                    return Err(e);
+                }
+            }
         }
         Err(e) => {
-            println!("{}", e);
+            error!("Failed to decode: {}", e);
             return Err(e);
         }
     }

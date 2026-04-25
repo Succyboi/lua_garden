@@ -10,7 +10,7 @@ mod tests {
         let mut metadata_database = MetadataDatabase::new();
 
         for path in root_paths {
-            feature_extractor.extract_feature(&path);
+            feature_extractor.extract_feature(&path, None);
         }
 
         while feature_extractor.working() {
@@ -34,7 +34,7 @@ mod tests {
         let vector_db = vector_db::VectorDatabase::new().expect("Failed to create vector database");
 
         for path in root_paths {
-            feature_extractor.extract_feature(&path);
+            feature_extractor.extract_feature(&path, None);
         }
 
         while feature_extractor.working() {

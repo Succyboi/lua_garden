@@ -12,7 +12,26 @@ async fn state(app_state: Data<Mutex<AppState>>) -> impl Responder {
     let features = app_state.metadata_db.len();
 
     return HttpResponse::Ok().json(serde_json::json!({
+        "name": env!("CARGO_PKG_NAME"),
+        "version": env!("CARGO_PKG_VERSION"),
+        "authors": env!("CARGO_PKG_AUTHORS"),
         "features": features,
+    }));
+}
+
+const MAX_ALL_THRESHOLD: usize = 100;
+// Random feature
+#[get("/all")]
+async fn all(app_state: Data<Mutex<AppState>>) -> impl Responder {
+    let mut app_state = app_state.lock().unwrap();
+    app_state.update();
+
+    if app_state.metadata_db.len() > MAX_ALL_THRESHOLD {
+        return HttpResponse::NotAcceptable().finish();
+    }
+
+    return HttpResponse::Ok().json(serde_json::json!({
+        "features": app_state.metadata_db.values(),
     }));
 }
 
@@ -65,9 +84,44 @@ async fn similar(app_state: Data<Mutex<AppState>>, path: Path<(u32, usize)>) -> 
         }
 
         return HttpResponse::Ok().json(serde_json::json!({
-            "feature": similar_features,
+            "features": similar_features,
         }));
     } else {
         return HttpResponse::NotFound().finish();
     }
+}
+
+// Get feature by id
+#[get("/feature/{id}")]
+async fn feature_id(app_state: Data<Mutex<AppState>>, path: Path<u32>) -> impl Responder {
+    let mut app_state = app_state.lock().unwrap();
+    app_state.update();
+
+    let id = path.into_inner();
+
+    if let Some(feature) = app_state.metadata_db.get(id) {
+        return HttpResponse::Ok().json(serde_json::json!({
+            "feature": feature,
+        }));
+    } else {
+        return HttpResponse::NotFound().finish();
+    }
+}
+
+// Get web html
+pub async fn web(app_state: Data<Mutex<AppState>>) -> impl Responder {
+    let html = r#"<!DOCTYPE html>
+    <html>
+        <head>
+
+        </head>
+        <body>
+            <form target="/upload" method="post" enctype="multipart/form-data">
+                <input type="file" multiple name="file"/>
+                <button type="submit">Submit</button>
+            </form>
+        </body>
+    </html>"#;
+    
+    return HttpResponse::Ok().body(html);
 }
