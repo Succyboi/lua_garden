@@ -9,6 +9,7 @@ mod appstate;
 mod get_endpoints;
 mod post_endpoints;
 
+use actix_cors::Cors;
 use env_logger::Env;
 use log::{ info, warn, error };
 use std::{sync::Mutex, time::SystemTime};
@@ -35,8 +36,11 @@ async fn main() -> std::io::Result<()> {
 
     info!("Starting server at http://127.0.0.1:{}", API_PORT);
     HttpServer::new(move || {
+        let cors = Cors::permissive();
+
         App::new()
             .wrap(middleware::Logger::default())
+            .wrap(cors)
             .app_data(app_state.clone())
             .app_data(TempFileConfig::default().directory(UPLOADS_PATH))
             .service(Files::new("/static", FILES_PATH))
