@@ -9,5 +9,7 @@ members = [
     "mlem_stretch",
     "mlem_markov",
     "mlem_tidbit",
+    "mlem_16dist",
+
     "mlem_search"
 ]
