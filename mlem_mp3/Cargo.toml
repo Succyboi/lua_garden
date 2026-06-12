@@ -1,0 +1,23 @@
+[package]
+name = "mlem_mp3"
+authors = [
+    "Puk Bruinsma / DJ ZITwerK <puk@mlemrecords.com>"
+    ]
+homepage = "https://mlemrecords.com"
+version = "0.1.0"
+edition = "2021"
+description = "An mp3 encoder plugin."
+license-file = "LICENSE"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+path = "src/lib.rs"
+
+[dependencies]
+nih_plug = { git = "https://github.com/robbert-vdh/nih-plug", features = ["standalone", "vst3"] }
+nih_plug_egui = { git = "https://github.com/robbert-vdh/nih-plug" }
+atomic_float = "1.1.0"
+mp3lame-encoder = "0.2.4"
+symphonia = { version = "0.5.2", features = ["mp3"] }
+mlem_egui_themes = { path = "../mlem_egui_themes" }
+mlem_base = { path = "../mlem_base" }

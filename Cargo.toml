@@ -10,6 +10,7 @@ members = [
     "mlem_markov",
     "mlem_tidbit",
     "mlem_16dist",
+    "mlem_mp3",
 
     "mlem_search"
 ]
